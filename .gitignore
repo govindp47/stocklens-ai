@@ -1,0 +1,55 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+coverage.xml
+.coverage
+htmlcov/
+
+# ── Environment files ─────────────────────────────────────────────────────────
+.env
+.env.local
+backend/.env
+frontend/.env.local
+*.env
+
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.vercel/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+*.sql.gz
+*.sql.gz.enc
+*.enc
+
+# ── Secrets / SSL ─────────────────────────────────────────────────────────────
+infra/nginx/ssl/
+*.pem
+*.key
+*.crt
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+*.log
+playwright-report/
+test-results/

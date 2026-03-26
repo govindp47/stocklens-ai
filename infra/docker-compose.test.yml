@@ -1,0 +1,39 @@
+version: '3.9'
+
+# Test environment overrides — applied on top of docker-compose.yml
+# Run with: docker compose -f infra/docker-compose.test.yml up -d
+# Separate DB port (5433) allows dev and test stacks to run simultaneously.
+
+services:
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5433:5432"            # different host port to avoid conflict with dev stack
+    environment:
+      - POSTGRES_DB=stocklens_test
+      - POSTGRES_USER=stocklens
+      - POSTGRES_PASSWORD=test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stocklens -d stocklens_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - stocklens_test
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"            # different host port to avoid conflict with dev stack
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - stocklens_test
+
+networks:
+  stocklens_test:
+    driver: bridge

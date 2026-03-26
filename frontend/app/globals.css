@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Semantic color tokens (light mode) ──────────────────────────────────── */
+:root {
+  /* Brand palette */
+  --brand-50:  210 100% 97%;
+  --brand-500: 210 100% 50%;
+  --brand-900: 210 100% 20%;
+
+  /* Sentiment indicators */
+  --sentiment-positive: 142 76% 36%;
+  --sentiment-neutral:  43 96% 56%;
+  --sentiment-negative: 0 84% 60%;
+
+  /* Surface & text */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --border:     214.3 31.8% 91.4%;
+}
+
+/* ── Dark mode (class-based toggle; prefers-color-scheme as fallback) ─────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --sentiment-positive: 142 76% 50%;
+    --sentiment-neutral:  43 96% 70%;
+    --sentiment-negative: 0 84% 70%;
+  }
+}
+
+/* ── Base resets ──────────────────────────────────────────────────────────── */
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
