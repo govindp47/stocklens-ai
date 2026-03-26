@@ -1,4 +1,4 @@
-import { DISCLAIMER_TEXT } from '@/lib/constants'
+import { DISCLAIMER_TEXT } from "@/lib/constants";
 
 export function Disclaimer() {
   return (
@@ -8,5 +8,5 @@ export function Disclaimer() {
     >
       {DISCLAIMER_TEXT}
     </div>
-  )
+  );
 }

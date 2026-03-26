@@ -1,0 +1,67 @@
+# deploy.yml — Production deployment workflow
+#
+# PURPOSE:
+#   SSH-based rolling deployment to the production VPS.
+#   Pulls new Docker images from GHCR, runs Alembic migrations,
+#   replaces api and frontend containers, and verifies health endpoints.
+#
+# STATUS: Disabled stub — all jobs have `if: false`.
+#
+# ACTIVATION:
+#   This workflow will be wired up in T-060 (Phase 7).
+#   Required GitHub secrets before enabling:
+#     - PROD_HOST          — production server IP or hostname
+#     - PROD_USER          — SSH login user (e.g. stocklens)
+#     - PROD_SSH_KEY       — PEM-encoded private SSH key (no passphrase)
+#     - GHCR_TOKEN         — GitHub personal access token with read:packages scope
+#
+# TRIGGER (once enabled):
+#   Manual workflow_dispatch, or automatically after a successful e2e job
+#   on a push to main.
+
+name: Deploy to Production
+
+on:
+  workflow_dispatch:  # manual trigger only while stub
+
+jobs:
+  deploy-production:
+    if: false  # TODO: enable in T-060
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://stocklens.example.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key:      ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/stocklens
+
+            echo "${{ secrets.GHCR_TOKEN }}" | \
+              docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            docker compose -f infra/docker-compose.prod.yml pull api frontend
+
+            # Run migrations before swapping containers
+            docker compose -f infra/docker-compose.prod.yml \
+              run --rm api alembic upgrade head
+
+            # Rolling replacement — db/redis/ollama keep running
+            docker compose -f infra/docker-compose.prod.yml \
+              up -d --no-deps api frontend
+
+            sleep 10
+
+            curl -sf http://localhost:8000/health || \
+              { echo "API health check failed"; exit 1; }
+            curl -sf http://localhost:3000/api/health || \
+              { echo "Frontend health check failed"; exit 1; }
+
+            echo "Deployment successful: $(date -u)"

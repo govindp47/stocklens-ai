@@ -12,5 +12,5 @@ export default function HomePage() {
         readOnly
       />
     </div>
-  )
+  );
 }
