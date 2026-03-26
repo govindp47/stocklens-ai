@@ -1,0 +1,257 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/stocklens
+
+jobs:
+  # ── Backend linting and type checking ─────────────────────────────────────
+  backend-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -e ".[dev]" -q
+      - run: ruff check app tests
+      - run: ruff format --check app tests
+      - run: mypy app --strict
+
+  # ── Frontend linting and type checking ────────────────────────────────────
+  frontend-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --silent
+      - run: npx tsc --noEmit
+      - run: npx eslint . --max-warnings 0
+      - run: npx prettier --check .
+
+  # ── Security audit ─────────────────────────────────────────────────────────
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Audit Python dependencies
+        run: |
+          pip install pip-audit -q
+          pip install -e "backend/.[dev]" -q
+          pip-audit --vulnerability-service pypi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd frontend && npm audit --audit-level=high
+
+  # ── Backend unit tests ────────────────────────────────────────────────────
+  backend-unit:
+    runs-on: ubuntu-latest
+    needs: [backend-lint]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -e ".[dev]" -q
+      - run: pytest tests/unit -m unit -v --cov=app --cov-report=xml --cov-fail-under=0
+      - uses: codecov/codecov-action@v4
+        with:
+          files: backend/coverage.xml
+        continue-on-error: true  # codecov upload is non-critical
+
+  # ── Frontend unit tests ───────────────────────────────────────────────────
+  frontend-unit:
+    runs-on: ubuntu-latest
+    needs: [frontend-lint]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --silent
+      - run: npx vitest run --coverage
+
+  # ── Integration tests (disabled — enable in T-035) ────────────────────────
+  backend-integration:
+    if: false  # TODO: enable in T-035
+    runs-on: ubuntu-latest
+    needs: [backend-unit]
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: stocklens_test
+          POSTGRES_USER: stocklens
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://stocklens:test_password@localhost:5432/stocklens_test
+      REDIS_URL: redis://localhost:6379/0
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -e ".[dev]" -q
+      - run: alembic upgrade head
+      - run: pytest tests/integration -m integration -v
+
+  # ── Docker image build (disabled — enable in T-059) ──────────────────────
+  build-images:
+    if: false  # TODO: enable in T-059
+    runs-on: ubuntu-latest
+    needs: [backend-integration, frontend-unit, security-audit]
+    outputs:
+      api-tag:      ${{ steps.meta-api.outputs.tags }}
+      frontend-tag: ${{ steps.meta-frontend.outputs.tags }}
+      digest-api:   ${{ steps.build-api.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata — API
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-api
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Build and push API image
+        id: build-api
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/Dockerfile
+          target: production
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Extract metadata — Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          target: production
+          push: ${{ github.ref == 'refs/heads/main' }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://stocklens.example.com
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── E2E tests (disabled — enable in T-052) ────────────────────────────────
+  e2e:
+    if: false  # TODO: enable in T-052
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: |
+          docker compose -f infra/docker-compose.test.yml up -d
+          ./scripts/wait-for-healthy.sh
+      - run: cd frontend && npm ci && npx playwright install chromium
+      - run: cd frontend && npx playwright test --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+      - run: docker compose -f infra/docker-compose.test.yml down
+
+  # ── Production deployment (disabled — enable in T-060) ───────────────────
+  deploy-production:
+    if: false  # TODO: enable in T-060
+    runs-on: ubuntu-latest
+    needs: [e2e]
+    environment:
+      name: production
+      url: https://stocklens.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key:      ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/stocklens
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose -f infra/docker-compose.prod.yml pull api frontend
+            docker compose -f infra/docker-compose.prod.yml run --rm api alembic upgrade head
+            docker compose -f infra/docker-compose.prod.yml up -d --no-deps api frontend
+            sleep 10
+            curl -sf http://localhost:8000/health || { echo "API health check failed"; exit 1; }
+            curl -sf http://localhost:3000/api/health || { echo "Frontend health check failed"; exit 1; }
+            echo "Deployment successful: $(date -u)"

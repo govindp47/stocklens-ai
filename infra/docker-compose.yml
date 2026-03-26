@@ -1,13 +1,24 @@
 version: '3.9'
 
 services:
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - stocklens_internal
+
   api:
     build:
       context: ../backend
       dockerfile: Dockerfile
       target: development
-    ports:
-      - "8000:8000"
     volumes:
       - ../backend/app:/app/app:ro    # hot-reload via uvicorn --reload
       - ../backend/db:/app/db:ro
@@ -32,8 +43,6 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
       target: development
-    ports:
-      - "3000:3000"
     volumes:
       - ../frontend:/app:ro
       - /app/node_modules           # prevent host node_modules override
