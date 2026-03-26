@@ -1,30 +1,30 @@
-import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
-import { Disclaimer } from '@/components/ui/Disclaimer'
-import './globals.css'
+import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
+import { Disclaimer } from "@/components/ui/Disclaimer";
+import "./globals.css";
 
 const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-})
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 const jetBrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
-  display: 'swap',
-})
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: 'StockLens AI',
+  title: "StockLens AI",
   description:
-    'AI-powered stock analysis: market data, news sentiment, events, and insights — all in one view.',
-}
+    "AI-powered stock analysis: market data, news sentiment, events, and insights — all in one view.",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetBrainsMono.variable}`}>
@@ -44,5 +44,5 @@ export default function RootLayout({
         </main>
       </body>
     </html>
-  )
+  );
 }

@@ -12,7 +12,8 @@ version = "1.0.0"
 description = "StockLens AI — FastAPI backend"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi==0.111.0",
+    "fastapi==0.121.0",
+    "starlette==0.49.3",
     "uvicorn[standard]==0.29.0",
     "uvloop==0.19.0",
     "httptools==0.6.1",
@@ -26,10 +27,10 @@ dependencies = [
     "yfinance==0.2.40",
     "feedparser==6.0.11",
     "httpx==0.27.0",
-    "jinja2==3.1.4",
+    "jinja2==3.1.6",
     "prometheus-fastapi-instrumentator==7.0.0",
     "structlog==24.1.0",
-    "python-multipart==0.0.9",
+    "python-multipart==0.0.22",
 ]
 
 [project.optional-dependencies]

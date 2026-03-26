@@ -58,7 +58,8 @@ jobs:
         run: |
           pip install pip-audit -q
           pip install -e "backend/.[dev]" -q
-          pip-audit --vulnerability-service pypi
+          # CVE-2026-4539 (pygments): no fix version available yet — transitive via rich
+          pip-audit --vulnerability-service pypi --ignore-vuln CVE-2026-4539
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
