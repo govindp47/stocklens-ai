@@ -32,6 +32,7 @@ dependencies = [
     "prometheus-fastapi-instrumentator==7.0.0",
     "structlog==24.1.0",
     "python-multipart==0.0.22",
+    "mmh3==4.1.0",
 ]
 
 [project.optional-dependencies]
