@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.infrastructure.event_bus import RedisEventBus
 from app.infrastructure.providers.market_data import YFinanceMarketDataProvider
 from app.infrastructure.providers.news_feed import RSSNewsFeedProvider
+from app.infrastructure.providers.prompt_loader import PromptLoader
 from app.infrastructure.repositories.report_repository import ReportRepository
 from app.infrastructure.repositories.ticker_cache_repository import TickerCacheRepository
 from app.pipeline.orchestrator import PipelineOrchestrator
@@ -77,6 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.redis = redis_client
     app.state.llm_semaphore = llm_semaphore
     app.state.orchestrator = orchestrator
+    app.state.prompt_loader = PromptLoader(template_dir="app/prompts")
 
     log.info(
         "application_startup",

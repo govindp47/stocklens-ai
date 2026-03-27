@@ -1,0 +1,15 @@
+Classify the sentiment of the following financial news headline about {{ company_name }} ({{ ticker }}).
+
+Use exactly one of these labels: positive, neutral, negative
+Provide a confidence score from 0.0 to 1.0.
+
+Consider: positive = good news for the company or its investors; negative = bad news; neutral = factual with no clear direction.
+
+Headline: {{ title }}
+{% if summary %}Context: {{ summary }}{% endif %}
+
+Respond ONLY with valid JSON. Do not include any text before or after the JSON object.
+{
+  "sentiment": "positive|neutral|negative",
+  "score": 0.0
+}

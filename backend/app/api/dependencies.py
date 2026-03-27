@@ -5,10 +5,10 @@ Stateful objects (DB pool, Redis, orchestrator, semaphore) are stored on
 ``app.state`` during the lifespan context and retrieved here.
 
 LLM provider selection:
-  - X-OpenAI-Key header present and starts with "sk-" → OpenAIProviderStub
-  - Otherwise → OllamaProviderStub
+  - X-OpenAI-Key header present and starts with "sk-" → OpenAIProvider
+  - Otherwise → OllamaProvider
 
-Both stubs satisfy the LLMProvider Protocol.  Full implementations are in T-031.
+Both providers satisfy the LLMProvider Protocol.
 """
 
 from __future__ import annotations
@@ -20,56 +20,10 @@ from fastapi import Request
 from redis.asyncio import Redis
 
 from app.config import Settings, get_settings
+from app.infrastructure.providers.llm_ollama import OllamaProvider
+from app.infrastructure.providers.llm_openai import OpenAIProvider
+from app.infrastructure.providers.prompt_loader import PromptLoader
 from app.pipeline.orchestrator import PipelineOrchestrator
-
-
-# ── LLM provider stubs (T-031 will replace with full implementations) ──────────
-
-
-class OllamaProviderStub:
-    """Placeholder Ollama provider satisfying LLMProvider Protocol.
-
-    Used when no X-OpenAI-Key header is present.  T-031 replaces this with a
-    full implementation that calls the local Ollama HTTP API.
-    """
-
-    @property
-    def model_name(self) -> str:
-        return "ollama"
-
-    async def complete(
-        self,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-    ) -> str:
-        raise NotImplementedError("OllamaProvider not yet implemented (T-031)")
-
-
-class OpenAIProviderStub:
-    """Placeholder OpenAI provider satisfying LLMProvider Protocol.
-
-    Used when the X-OpenAI-Key header is present with a valid ``sk-`` prefix.
-    T-031 replaces this with a full implementation that calls the OpenAI API.
-
-    The API key is held only for the duration of the request and is never
-    logged, stored, or returned in any response.
-    """
-
-    def __init__(self, api_key: str) -> None:
-        self._api_key = api_key
-
-    @property
-    def model_name(self) -> str:
-        return "openai"
-
-    async def complete(
-        self,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-    ) -> str:
-        raise NotImplementedError("OpenAIProvider not yet implemented (T-031)")
 
 
 # ── Core state dependencies ────────────────────────────────────────────────────
@@ -93,6 +47,12 @@ def get_llm_semaphore(request: Request) -> asyncio.Semaphore:
 # ── Pipeline dependencies ──────────────────────────────────────────────────────
 
 
+def get_prompt_loader(request: Request) -> PromptLoader:
+    """Return the singleton PromptLoader created during app startup."""
+    loader: PromptLoader = request.app.state.prompt_loader
+    return loader
+
+
 def get_orchestrator(request: Request) -> PipelineOrchestrator:
     """Return the singleton PipelineOrchestrator created during app startup."""
     orchestrator: PipelineOrchestrator = request.app.state.orchestrator
@@ -101,7 +61,7 @@ def get_orchestrator(request: Request) -> PipelineOrchestrator:
 
 def get_llm_provider(
     request: Request,
-) -> OllamaProviderStub | OpenAIProviderStub:
+) -> OllamaProvider | OpenAIProvider:
     """Select LLM provider based on the X-OpenAI-Key request header.
 
     If the header is present and starts with ``sk-``, an OpenAI provider is
@@ -111,10 +71,20 @@ def get_llm_provider(
     No cryptographic verification is performed — the key is forwarded
     verbatim to the OpenAI API.  Invalid keys will fail at inference time.
     """
+    settings: Settings = get_settings()
+    semaphore: asyncio.Semaphore = request.app.state.llm_semaphore
     api_key = request.headers.get("X-OpenAI-Key", "")
     if api_key and api_key.startswith("sk-"):
-        return OpenAIProviderStub(api_key)
-    return OllamaProviderStub()
+        return OpenAIProvider(
+            api_key=api_key,
+            model="gpt-4o-mini",
+            semaphore=semaphore,
+        )
+    return OllamaProvider(
+        base_url=settings.ollama_url,
+        model=settings.default_llm_model,
+        semaphore=semaphore,
+    )
 
 
 # Re-exported so callers can use `from app.api.dependencies import get_settings`
@@ -124,8 +94,10 @@ __all__ = [
     "get_llm_semaphore",
     "get_orchestrator",
     "get_llm_provider",
+    "get_prompt_loader",
     "get_settings",
-    "OllamaProviderStub",
-    "OpenAIProviderStub",
+    "OllamaProvider",
+    "OpenAIProvider",
+    "PromptLoader",
     "Settings",
 ]

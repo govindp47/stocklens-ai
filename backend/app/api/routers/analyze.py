@@ -24,8 +24,8 @@ from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
 from app.api.dependencies import (
-    OllamaProviderStub,
-    OpenAIProviderStub,
+    OllamaProvider,
+    OpenAIProvider,
     get_db_pool,
     get_llm_provider,
     get_orchestrator,
@@ -77,7 +77,7 @@ async def post_analyze(
     db_pool: asyncpg.Pool = Depends(get_db_pool),  # noqa: B008
     redis: Redis = Depends(get_redis),  # type: ignore[type-arg]  # noqa: B008
     orchestrator: PipelineOrchestrator = Depends(get_orchestrator),  # noqa: B008
-    llm_provider: OllamaProviderStub | OpenAIProviderStub = Depends(  # noqa: B008
+    llm_provider: OllamaProvider | OpenAIProvider = Depends(  # noqa: B008
         get_llm_provider
     ),
 ) -> AnalyzeResponse | JSONResponse:

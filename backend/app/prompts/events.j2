@@ -1,0 +1,28 @@
+You are a financial analyst. Review the following news articles about {{ company_name }} ({{ ticker }}) and identify significant business events.
+
+Only include events that are clearly supported by the articles. Do not invent events.
+
+Allowed event types (use exact strings):
+- "Earnings Announcement"
+- "Acquisition or Merger"
+- "Regulatory Action"
+- "Product Launch"
+- "Leadership Change"
+- "Other Significant Event"
+
+Articles:
+{% for article in articles %}
+[{{ loop.index }}] {{ article.title }}{% if article.summary %} — {{ article.summary }}{% endif %}
+{% endfor %}
+
+Respond ONLY with valid JSON. Return an empty array if no significant events are found.
+{
+  "events": [
+    {
+      "event_type": "string",
+      "description": "one sentence description",
+      "detected_date": "YYYY-MM-DD or null",
+      "source_article_indices": [1, 2]
+    }
+  ]
+}
