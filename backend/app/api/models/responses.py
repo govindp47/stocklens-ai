@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,3 +18,47 @@ class AnalyzeResponse(BaseModel):
 
     run_id: UUID
     status: str
+
+
+class ResultsResponse(BaseModel):
+    """Response body for GET /api/v1/results/{run_id} (200 OK).
+
+    Attributes:
+        run_id: UUID of the analysis run.
+        ticker: Ticker symbol analysed.
+        status: Pipeline status — always ``"complete"`` for a 200 response.
+        report: The fully-assembled AnalysisReport as a plain dict (JSON-safe).
+    """
+
+    run_id: UUID
+    ticker: str
+    status: str
+    report: dict[str, Any]
+
+
+class NewsResponse(BaseModel):
+    """Response body for GET /api/v1/news/{ticker} (200 OK).
+
+    Attributes:
+        ticker: Normalised ticker symbol.
+        article_count: Total number of articles returned.
+        articles: List of serialised RawArticle dicts.
+    """
+
+    ticker: str
+    article_count: int
+    articles: list[dict[str, Any]]
+
+
+class MetricsResponse(BaseModel):
+    """Response body for GET /api/v1/metrics (200 OK).
+
+    Attributes:
+        window_hours: The time window covered (always 24).
+        bucket_count: Number of hourly buckets returned.
+        buckets: List of hourly metric rows.
+    """
+
+    window_hours: int
+    bucket_count: int
+    buckets: list[dict[str, Any]]

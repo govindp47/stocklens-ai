@@ -16,6 +16,8 @@ from app.infrastructure.providers.news_feed import RSSNewsFeedProvider
 from app.infrastructure.providers.prompt_loader import PromptLoader
 from app.infrastructure.repositories.report_repository import ReportRepository
 from app.infrastructure.repositories.ticker_cache_repository import TickerCacheRepository
+from app.jobs.cleanup import run_cleanup_job
+from app.jobs.metrics_aggregator import run_metrics_aggregation_job
 from app.pipeline.orchestrator import PipelineOrchestrator
 from app.pipeline.steps import build_step_registry
 
@@ -77,6 +79,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     app.state.orchestrator = orchestrator
 
+    # ── Launch background jobs ─────────────────────────────────────────────
+    cleanup_task: asyncio.Task[None] = asyncio.create_task(
+        run_cleanup_job(db_pool),
+        name="cleanup-job",
+    )
+    metrics_task: asyncio.Task[None] = asyncio.create_task(
+        run_metrics_aggregation_job(db_pool),
+        name="metrics-aggregation-job",
+    )
+
     log.info(
         "application_startup",
         version=settings.app_version,
@@ -88,6 +100,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     log.info("application_shutdown", version=settings.app_version)
+
+    # ── Cancel background jobs cleanly ────────────────────────────────────
+    cleanup_task.cancel()
+    metrics_task.cancel()
+    await asyncio.gather(cleanup_task, metrics_task, return_exceptions=True)
 
     await redis_client.aclose()  # type: ignore[attr-defined]
     await db_pool.close()

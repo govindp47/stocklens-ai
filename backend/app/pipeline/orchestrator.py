@@ -186,6 +186,7 @@ class PipelineOrchestrator:
             steps_completed=steps_completed,
             steps_failed=steps_failed,
             error_message=critical_failure_reason,
+            report_json=context.outputs.final_report_json,
         )
 
     def launch(
@@ -332,10 +333,13 @@ class PipelineOrchestrator:
         steps_completed: int,
         steps_failed: int,
         error_message: str | None = None,
+        report_json: str | None = None,
     ) -> None:
         """Persist the final run state and publish the terminal pipeline event.
 
         If ``error_message`` is set the run is marked failed; otherwise complete.
+        ``report_json`` is the serialised AnalysisReport from ReportAssembler;
+        falls back to an empty JSON object if the assembler did not run.
         DB write failures are logged but do not prevent the SSE event from being
         published (clients receive data regardless of DB persistence).
         """
@@ -359,13 +363,11 @@ class PipelineOrchestrator:
                 "steps_failed": steps_failed,
             })
         else:
-            # ReportAssembler (T-021) will populate report_data_json.
-            # At this stage we persist an empty payload; the full JSON is
-            # backfilled when the assembler task runs.
+            persisted_json = report_json if report_json is not None else json.dumps({})
             try:
                 await self._report_repository.mark_complete(
                     run_id,
-                    json.dumps({}),
+                    persisted_json,
                     steps_completed,
                 )
             except Exception:
