@@ -102,9 +102,8 @@ jobs:
       - run: npm ci --silent
       - run: npx vitest run --coverage
 
-  # ── Integration tests (disabled — enable in T-035) ────────────────────────
+  # ── Integration tests ─────────────────────────────────────────────────────
   backend-integration:
-    if: false  # TODO: enable in T-035
     runs-on: ubuntu-latest
     needs: [backend-unit]
     services:
