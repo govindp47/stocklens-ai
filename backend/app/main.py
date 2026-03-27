@@ -4,7 +4,9 @@ from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
 import app.metrics as _metrics  # noqa: F401 — registers Prometheus metrics on import
+from app.api.routers import analyze
 from app.api.routers import health
+from app.api.routers import stream
 from app.config import get_settings
 from app.lifespan import lifespan
 from app.logging_config import configure_logging
@@ -21,6 +23,8 @@ def create_app() -> FastAPI:
     )
 
     application.include_router(health.router)
+    application.include_router(analyze.router, prefix="/api/v1")
+    application.include_router(stream.router, prefix="/api/v1")
 
     # Expose /metrics for Prometheus scraping (blocked externally by Nginx)
     Instrumentator().instrument(application).expose(

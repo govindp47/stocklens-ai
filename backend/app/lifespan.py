@@ -10,6 +10,17 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 
 from app.config import get_settings
+from app.infrastructure.event_bus import RedisEventBus
+from app.infrastructure.providers.market_data import YFinanceMarketDataProvider
+from app.infrastructure.providers.news_feed import RSSNewsFeedProvider
+from app.infrastructure.repositories.report_repository import ReportRepository
+from app.infrastructure.repositories.ticker_cache_repository import TickerCacheRepository
+from app.pipeline.orchestrator import PipelineOrchestrator
+from app.pipeline.steps.base import PipelineStep
+from app.pipeline.steps.market_data_collector import MarketDataCollector
+from app.pipeline.steps.news_deduplicator import NewsDeduplicator
+from app.pipeline.steps.news_retriever import NewsRetriever
+from app.pipeline.steps.ticker_validator import TickerValidator
 
 log = structlog.get_logger(__name__)
 
@@ -36,9 +47,36 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     llm_semaphore = asyncio.Semaphore(settings.max_concurrent_llm_calls)
 
+    # ── Wire up the pipeline orchestrator ─────────────────────────────────────
+    market_data_provider = YFinanceMarketDataProvider(
+        redis=redis_client, settings=settings
+    )
+    news_feed_provider = RSSNewsFeedProvider(redis=redis_client, settings=settings)
+    ticker_cache_repo = TickerCacheRepository(pool=db_pool, redis=redis_client)
+    event_bus = RedisEventBus(redis=redis_client)
+    report_repository = ReportRepository(pool=db_pool)
+
+    steps: list[PipelineStep] = [
+        TickerValidator(
+            ticker_cache_repo=ticker_cache_repo,
+            market_data_provider=market_data_provider,
+        ),
+        MarketDataCollector(market_data_provider=market_data_provider),
+        NewsRetriever(news_provider=news_feed_provider),
+        NewsDeduplicator(),
+    ]
+
+    orchestrator = PipelineOrchestrator(
+        steps=steps,
+        event_bus=event_bus,
+        report_repository=report_repository,
+        llm_semaphore=llm_semaphore,
+    )
+
     app.state.db_pool = db_pool
     app.state.redis = redis_client
     app.state.llm_semaphore = llm_semaphore
+    app.state.orchestrator = orchestrator
 
     log.info(
         "application_startup",
