@@ -17,11 +17,7 @@ from app.infrastructure.providers.prompt_loader import PromptLoader
 from app.infrastructure.repositories.report_repository import ReportRepository
 from app.infrastructure.repositories.ticker_cache_repository import TickerCacheRepository
 from app.pipeline.orchestrator import PipelineOrchestrator
-from app.pipeline.steps.base import PipelineStep
-from app.pipeline.steps.market_data_collector import MarketDataCollector
-from app.pipeline.steps.news_deduplicator import NewsDeduplicator
-from app.pipeline.steps.news_retriever import NewsRetriever
-from app.pipeline.steps.ticker_validator import TickerValidator
+from app.pipeline.steps import build_step_registry
 
 log = structlog.get_logger(__name__)
 
@@ -48,7 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     llm_semaphore = asyncio.Semaphore(settings.max_concurrent_llm_calls)
 
-    # ── Wire up the pipeline orchestrator ─────────────────────────────────────
+    # ── Providers and repositories ─────────────────────────────────────────
     market_data_provider = YFinanceMarketDataProvider(
         redis=redis_client, settings=settings
     )
@@ -56,16 +52,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     ticker_cache_repo = TickerCacheRepository(pool=db_pool, redis=redis_client)
     event_bus = RedisEventBus(redis=redis_client)
     report_repository = ReportRepository(pool=db_pool)
+    prompt_loader = PromptLoader(template_dir="app/prompts")
 
-    steps: list[PipelineStep] = [
-        TickerValidator(
-            ticker_cache_repo=ticker_cache_repo,
-            market_data_provider=market_data_provider,
-        ),
-        MarketDataCollector(market_data_provider=market_data_provider),
-        NewsRetriever(news_provider=news_feed_provider),
-        NewsDeduplicator(),
-    ]
+    # ── Store on app.state before building step registry ──────────────────
+    app.state.db_pool = db_pool
+    app.state.redis = redis_client
+    app.state.llm_semaphore = llm_semaphore
+    app.state.market_data_provider = market_data_provider
+    app.state.news_feed_provider = news_feed_provider
+    app.state.ticker_cache_repo = ticker_cache_repo
+    app.state.event_bus = event_bus
+    app.state.report_repository = report_repository
+    app.state.prompt_loader = prompt_loader
+
+    # ── Build the full 9-step pipeline ────────────────────────────────────
+    steps = build_step_registry(app.state)
 
     orchestrator = PipelineOrchestrator(
         steps=steps,
@@ -74,17 +75,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         llm_semaphore=llm_semaphore,
     )
 
-    app.state.db_pool = db_pool
-    app.state.redis = redis_client
-    app.state.llm_semaphore = llm_semaphore
     app.state.orchestrator = orchestrator
-    app.state.prompt_loader = PromptLoader(template_dir="app/prompts")
 
     log.info(
         "application_startup",
         version=settings.app_version,
         environment=settings.environment,
         log_level=settings.log_level,
+        pipeline_steps=len(steps),
     )
 
     yield

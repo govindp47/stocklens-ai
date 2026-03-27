@@ -15,7 +15,7 @@ from uuid import UUID
 
 import structlog
 
-from app.domain.exceptions import ExternalProviderError, LLMParseError
+from app.domain.exceptions import ExternalProviderError, LLMParseError, TickerNotResolvableError
 from app.infrastructure.event_bus import EventBus
 from app.infrastructure.providers import LLMProvider
 from app.infrastructure.repositories.report_repository import ReportRepository
@@ -283,6 +283,16 @@ class PipelineOrchestrator:
                 # Retryable: exponential backoff capped at 8 s.
                 backoff = min(1 << (attempt - 1), 8)
                 await asyncio.sleep(backoff)
+
+            except TickerNotResolvableError as exc:
+                duration_ms = _now_ms() - start_ms
+                return StepResult(
+                    step_name=step.name,
+                    step_index=step.step_index,
+                    status=StepStatus.FAILED,
+                    duration_ms=duration_ms,
+                    output_summary=f"TICKER_NOT_RESOLVABLE: {exc}",
+                )
 
             except LLMParseError as exc:
                 duration_ms = _now_ms() - start_ms

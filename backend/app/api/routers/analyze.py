@@ -115,12 +115,13 @@ async def post_analyze(
 
     # ── 3. Create analysis run ────────────────────────────────────────────────
     run_id = uuid4()
+    provider_type = "openai" if isinstance(llm_provider, OpenAIProvider) else "ollama"
     await report_repo.create_run(
         run_id=run_id,
         ticker=body.ticker,
         ip_address=ip,
-        llm_provider=llm_provider.model_name,
-        llm_model=None,
+        llm_provider=provider_type,
+        llm_model=llm_provider.model_name,
     )
 
     # ── 4. Launch pipeline (fire-and-forget asyncio.Task) ─────────────────────

@@ -36,6 +36,7 @@ class PipelineOutputs:
     sentiment: SentimentResult | None = None
     events: list[ExtractedEvent] | None = None
     insights: InsightSections | None = None
+    final_report_json: str | None = None  # set by ReportAssembler (T-038)
 
     # ── predicates ────────────────────────────────────────────────────────
 
