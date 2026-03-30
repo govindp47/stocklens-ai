@@ -206,9 +206,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── E2E tests (disabled — enable in T-052) ────────────────────────────────
+  # ── E2E tests (enabled in T-051) ────────────────────────────────────────────
   e2e:
-    if: false  # TODO: enable in T-052
     runs-on: ubuntu-latest
     needs: [build-images]
     steps:
