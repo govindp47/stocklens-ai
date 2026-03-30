@@ -25,7 +25,6 @@ from app.infrastructure.providers.llm_openai import OpenAIProvider
 from app.infrastructure.providers.prompt_loader import PromptLoader
 from app.pipeline.orchestrator import PipelineOrchestrator
 
-
 # ── Core state dependencies ────────────────────────────────────────────────────
 
 
@@ -67,14 +66,16 @@ def get_llm_provider(
     If the header is present and starts with ``sk-``, an OpenAI provider is
     returned.  Otherwise the default Ollama provider is used.
 
-    Security note: the key is validated for format only (``sk-`` prefix).
-    No cryptographic verification is performed — the key is forwarded
-    verbatim to the OpenAI API.  Invalid keys will fail at inference time.
+    Security note: the key is validated for format only (``sk-`` prefix and
+    ≤ 200 characters).  No cryptographic verification is performed — the key
+    is forwarded verbatim to the OpenAI API.  Invalid keys will fail at
+    inference time.  Keys failing either format check silently fall back to
+    Ollama — no error is returned to the client.
     """
     settings: Settings = get_settings()
     semaphore: asyncio.Semaphore = request.app.state.llm_semaphore
     api_key = request.headers.get("X-OpenAI-Key", "")
-    if api_key and api_key.startswith("sk-"):
+    if api_key and api_key.startswith("sk-") and len(api_key) <= 200:
         return OpenAIProvider(
             api_key=api_key,
             model="gpt-4o-mini",

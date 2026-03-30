@@ -21,10 +21,14 @@ def scrub_sensitive_fields(
     method: str,
     event_dict: MutableMapping[str, Any],
 ) -> MutableMapping[str, Any]:
-    """Structlog processor — replaces sensitive field values with [REDACTED]."""
-    for field in _SENSITIVE_FIELDS:
-        if field in event_dict:
-            event_dict[field] = "[REDACTED]"
+    """Structlog processor — replaces sensitive field values with [REDACTED].
+
+    Field name matching is case-insensitive so that variants like ``OPENAI_KEY``
+    and ``openai_key`` are both redacted.
+    """
+    for key in list(event_dict.keys()):
+        if key.lower() in _SENSITIVE_FIELDS:
+            event_dict[key] = "[REDACTED]"
     return event_dict
 
 
