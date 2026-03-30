@@ -303,6 +303,38 @@ def upgrade() -> None:
         "ON rate_limit_log (ip_address, rejected_at DESC)"
     ))
 
+    # ── Database least-privilege grants (07_SECURITY_MODEL.md §4.3) ─────────
+    # Ensure the application role exists before granting.
+    # In production, this role is created by the infrastructure provisioning
+    # step; IF NOT EXISTS makes the migration idempotent in all environments.
+    op.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'stocklens_app') THEN
+                CREATE ROLE stocklens_app LOGIN PASSWORD 'apppassword';
+            END IF;
+        END
+        $$;
+    """)
+
+    # CRUD grants on application tables
+    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON analysis_runs TO stocklens_app;")
+    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON pipeline_steps TO stocklens_app;")
+    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON system_metrics_hourly TO stocklens_app;")
+    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ticker_resolution_cache TO stocklens_app;")
+
+    # rate_limit_log is append-only: no UPDATE or DELETE for the app user
+    op.execute("GRANT SELECT, INSERT ON rate_limit_log TO stocklens_app;")
+
+    # Sequence usage (needed for autoincrement INSERTs)
+    op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO stocklens_app;")
+
+    # Explicitly deny DDL rights — no CREATE TABLE / ALTER TABLE / DROP TABLE
+    op.execute("REVOKE CREATE ON SCHEMA public FROM stocklens_app;")
+
+    # Deny access to the pg_authid system catalog (prevents reading password hashes)
+    op.execute("REVOKE ALL ON pg_catalog.pg_authid FROM stocklens_app;")
+
 
 def downgrade() -> None:
     # ── Drop indexes ────────────────────────────────────────────────────────
