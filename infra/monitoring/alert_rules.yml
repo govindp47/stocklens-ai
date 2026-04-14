@@ -1,0 +1,119 @@
+groups:
+  - name: stocklens_pipeline
+    interval: 30s
+    rules:
+
+      # ── PipelineHighErrorRate ────────────────────────────────────────────────
+      # Fires when more than 5% of pipeline runs fail over a 5-minute window,
+      # sustained for 5 minutes.
+      - alert: PipelineHighErrorRate
+        expr: |
+          (
+            sum(rate(pipeline_runs_total{status=~"failed|timed_out"}[5m]))
+            /
+            sum(rate(pipeline_runs_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline error rate > 5% for 5 minutes"
+          description: >
+            {{ $value | humanizePercentage }} of pipeline runs are failing.
+            Check Loki logs for ERROR entries and the Ollama container status.
+
+      # ── PipelineP95LatencyHigh ───────────────────────────────────────────────
+      # Fires when the P95 pipeline duration exceeds 75 seconds for 10 minutes.
+      # The pipeline timeout is 90s — P95 > 75s means most runs are near timeout.
+      - alert: PipelineP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(pipeline_duration_seconds_bucket[5m])) by (le)
+          ) > 75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 pipeline duration > 75s for 10 minutes"
+          description: >
+            P95 latency is {{ $value | humanizeDuration }}.
+            Pipeline timeout is 90s. Investigate Ollama inference time and
+            news fetching latency.
+
+  - name: stocklens_infrastructure
+    interval: 30s
+    rules:
+
+      # ── OllamaUnreachable ────────────────────────────────────────────────────
+      # Fires when Ollama is returning errors at > 0.5 errors/sec for 2 minutes.
+      # This indicates the Ollama container is down or unresponsive.
+      - alert: OllamaUnreachable
+        expr: |
+          rate(external_provider_errors_total{provider="ollama"}[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ollama LLM provider returning errors"
+          description: >
+            Ollama error rate is {{ $value | humanize }} errors/sec.
+            All new analysis pipelines will fail until Ollama recovers.
+            Run: docker compose restart ollama
+
+      # ── DatabaseConnectionPoolExhausted ─────────────────────────────────────
+      # Fires when active PostgreSQL connections exceed 18 (of max connections=20).
+      # At 18+, the application's asyncpg pool will begin queuing or rejecting
+      # connection requests.
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          pg_stat_database_numbackends{datname="stocklens"} > 18
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL connection pool near exhaustion (>18/20 connections)"
+          description: >
+            Active connections: {{ $value }}.
+            This will cause request failures if the asyncpg pool is exhausted.
+            Investigate long-running queries or connection leaks.
+
+      # ── HighRateLimitRejectionRate ───────────────────────────────────────────
+      # Fires when the rate limit rejection rate exceeds 1 rejection/sec for
+      # 5 minutes, suggesting sustained abuse or a traffic spike.
+      - alert: HighRateLimitRejectionRate
+        expr: |
+          rate(rate_limit_rejections_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "Elevated rate limit rejections — possible abuse or high traffic"
+          description: >
+            Rate limit rejection rate: {{ $value | humanize }} req/sec.
+            Review Nginx access logs and consider adjusting rate limit thresholds.
+
+  - name: stocklens_backup
+    interval: 60s
+    rules:
+
+      # ── BackupMissed ─────────────────────────────────────────────────────────
+      # Fires immediately when no successful backup has occurred in 25 hours
+      # (90000 seconds). The backup runs daily at 02:00 UTC; this allows a
+      # 1-hour grace period past the next expected backup window.
+      #
+      # The metric stocklens_last_backup_timestamp_seconds is a Unix timestamp
+      # written by backup.sh to a Prometheus textfile when backup completes.
+      # It is scraped by the node-exporter textfile collector.
+      - alert: BackupMissed
+        expr: |
+          time() - stocklens_last_backup_timestamp_seconds > 90000
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No successful backup in the last 25 hours"
+          description: >
+            Last backup was {{ $value | humanizeDuration }} ago.
+            Check /var/log/backup.log in the backup container for errors.
+            Run manually: docker compose exec backup /scripts/backup.sh

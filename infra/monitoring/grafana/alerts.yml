@@ -1,0 +1,64 @@
+apiVersion: 1
+
+# Grafana Alerting provisioning — contact points and notification policies
+# Alert rules are defined in Prometheus (prometheus.yml alerting_rules section)
+# and evaluated there. Grafana reads them via the Prometheus datasource.
+
+contactPoints:
+  - orgId: 1
+    name: stocklens-ops
+    receivers:
+      # Email notification — configure SMTP in Grafana's grafana.ini or env vars:
+      #   GF_SMTP_ENABLED=true
+      #   GF_SMTP_HOST=smtp.example.com:587
+      #   GF_SMTP_USER=alerts@example.com
+      #   GF_SMTP_PASSWORD=<secret>
+      #   GF_SMTP_FROM_ADDRESS=alerts@example.com
+      - uid: stocklens-email
+        type: email
+        settings:
+          addresses: ops@example.com
+          subject: "[StockLens] {{ .GroupLabels.alertname }} — {{ .Status | toUpper }}"
+          message: |
+            {{ range .Alerts }}
+            Alert: {{ .Labels.alertname }}
+            Severity: {{ .Labels.severity }}
+            Summary: {{ .Annotations.summary }}
+            State: {{ .Status }}
+            Fired at: {{ .StartsAt }}
+            {{ end }}
+        disableResolveMessage: false
+
+      # Webhook notification — uncomment and configure for Slack/PagerDuty/etc.
+      # - uid: stocklens-webhook
+      #   type: webhook
+      #   settings:
+      #     url: ${ALERT_WEBHOOK_URL}
+      #     httpMethod: POST
+      #   disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: stocklens-ops
+    group_by:
+      - alertname
+      - severity
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: stocklens-ops
+        matchers:
+          - severity = critical
+        group_wait: 10s
+        repeat_interval: 1h
+      - receiver: stocklens-ops
+        matchers:
+          - severity = warning
+        group_wait: 1m
+        repeat_interval: 4h
+      - receiver: stocklens-ops
+        matchers:
+          - severity = info
+        group_wait: 5m
+        repeat_interval: 12h
