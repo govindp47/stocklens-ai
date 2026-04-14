@@ -116,8 +116,7 @@ def _simhash_dedup(articles: list[RawArticle]) -> list[RawArticle]:
 
     for i, fp in enumerate(fingerprints):
         is_duplicate = any(
-            _hamming_distance(fp, fingerprints[j]) <= _HAMMING_THRESHOLD
-            for j in retained_indices
+            _hamming_distance(fp, fingerprints[j]) <= _HAMMING_THRESHOLD for j in retained_indices
         )
         if not is_duplicate:
             retained_indices.append(i)
@@ -189,7 +188,5 @@ class NewsDeduplicator(BasePipelineStep):
             step_index=self.step_index,
             status=StepStatus.COMPLETE,
             duration_ms=duration_ms,
-            output_summary=(
-                f"input={len(raw)} output={len(after_pass2)} removed={removed}"
-            ),
+            output_summary=(f"input={len(raw)} output={len(after_pass2)} removed={removed}"),
         )

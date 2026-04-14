@@ -1,4 +1,4 @@
-"""Pipeline integration test — Steps 1–4 (T-030).
+"""Pipeline integration test - Steps 1-4 (T-030).
 
 Runs the full 4-step pipeline (TickerValidator → MarketDataCollector →
 NewsRetriever → NewsDeduplicator) against a real PostgreSQL test database.
@@ -27,13 +27,11 @@ from app.domain.models.market import CompanyInfo, MarketData, PriceHistory, Pric
 from app.domain.models.news import RawArticle
 from app.infrastructure.event_bus import RedisEventBus
 from app.infrastructure.repositories.report_repository import ReportRepository
-from app.infrastructure.repositories.ticker_cache_repository import TickerCacheRepository
 from app.pipeline.orchestrator import PipelineOrchestrator
 from app.pipeline.steps.market_data_collector import MarketDataCollector
 from app.pipeline.steps.news_deduplicator import NewsDeduplicator
 from app.pipeline.steps.news_retriever import NewsRetriever
 from app.pipeline.steps.ticker_validator import TickerValidator
-
 
 # ── Mock data ─────────────────────────────────────────────────────────────────
 
@@ -115,16 +113,15 @@ def _build_mock_ticker_cache_repo() -> MagicMock:
 
 
 def _build_mock_llm_provider() -> MagicMock:
-    """Return a MagicMock LLM provider (Steps 1–4 don't call the LLM)."""
+    """Return a MagicMock LLM provider (Steps 1-4 don't call the LLM)."""
     provider = MagicMock()
     provider.model_name = "ollama"
     provider.complete = AsyncMock(return_value="{}")
     return provider
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestPipelineSteps1To4:
-
     async def test_four_step_pipeline_completes(
         self,
         db_pool: asyncpg.Pool,  # type: ignore[type-arg]
@@ -182,17 +179,18 @@ class TestPipelineSteps1To4:
                 run_id,
             )
             step_rows = await conn.fetch(
-                "SELECT step_name, status FROM pipeline_steps WHERE run_id = $1 ORDER BY step_index",
+                "SELECT step_name, status FROM pipeline_steps WHERE run_id = $1 "
+                "ORDER BY step_index",
                 run_id,
             )
 
         assert run_row is not None, "analysis_runs row not found"
-        assert run_row["status"] == "complete", (
-            f"Expected status='complete', got '{run_row['status']}'"
-        )
-        assert run_row["steps_completed"] == 4, (
-            f"Expected steps_completed=4, got {run_row['steps_completed']}"
-        )
+        assert (
+            run_row["status"] == "complete"
+        ), f"Expected status='complete', got '{run_row['status']}'"
+        assert (
+            run_row["steps_completed"] == 4
+        ), f"Expected steps_completed=4, got {run_row['steps_completed']}"
 
         step_names = [r["step_name"] for r in step_rows]
         assert "TickerValidator" in step_names
@@ -201,9 +199,9 @@ class TestPipelineSteps1To4:
         assert "NewsDeduplicator" in step_names
 
         for row in step_rows:
-            assert row["status"] == "complete", (
-                f"Step '{row['step_name']}' has status '{row['status']}', expected 'complete'"
-            )
+            assert (
+                row["status"] == "complete"
+            ), f"Step '{row['step_name']}' has status '{row['status']}', expected 'complete'"
 
     async def test_ticker_validator_critical_failure_halts_pipeline(
         self,
@@ -211,7 +209,6 @@ class TestPipelineSteps1To4:
         redis_api: fakeredis.FakeRedis,  # type: ignore[type-arg]
     ) -> None:
         """When TickerValidator fails, the pipeline halts and the run is marked failed."""
-        from app.domain.exceptions import TickerNotResolvableError
 
         run_id = uuid4()
         ticker = "ZZZZ"
@@ -316,8 +313,6 @@ class TestPipelineSteps1To4:
         complete_events = [e for e in step_update_events if e.get("status") == "complete"]
         indices = [e["step_index"] for e in complete_events]
 
-        assert indices == sorted(indices), (
-            f"Step events not in ascending order: {indices}"
-        )
+        assert indices == sorted(indices), f"Step events not in ascending order: {indices}"
         assert len(indices) == 4, f"Expected 4 complete step events, got {len(indices)}"
         assert indices[0] == 1, "First step index must be 1 (TickerValidator)"

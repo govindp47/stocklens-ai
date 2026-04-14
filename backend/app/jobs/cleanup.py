@@ -19,7 +19,6 @@ run_cleanup_once(db_pool) exposes a single-cycle version for unit tests.
 from __future__ import annotations
 
 import asyncio
-import logging
 
 import asyncpg
 import structlog

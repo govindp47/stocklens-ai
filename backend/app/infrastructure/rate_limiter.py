@@ -30,10 +30,10 @@ logger = logging.getLogger(__name__)
 # ── Per-endpoint limit table (from 07_SECURITY_MODEL.md § 9.1) ────────────────
 # Key format: "{method}_{path_slug}"  (produced by endpoint_slug())
 _ENDPOINT_LIMITS: dict[str, int] = {
-    "post_analyze": 10,       # POST /api/v1/analyze  — expensive LLM pipeline
-    "get_analyze":  100,      # GET  /api/v1/analyze/* — status/report polling
-    "get_health":   300,      # GET  /health
-    "default":      100,      # fallback for unlisted endpoints
+    "post_analyze": 10,  # POST /api/v1/analyze  — expensive LLM pipeline
+    "get_analyze": 100,  # GET  /api/v1/analyze/* — status/report polling
+    "get_health": 300,  # GET  /health
+    "default": 100,  # fallback for unlisted endpoints
 }
 
 
@@ -121,9 +121,7 @@ class RedisSlidingWindowRateLimiter:
         self._redis = redis
         settings = get_settings()
         self._window: int = (
-            window_seconds
-            if window_seconds is not None
-            else settings.rate_limit_window_seconds
+            window_seconds if window_seconds is not None else settings.rate_limit_window_seconds
         )
 
     async def check(self, ip: str, endpoint: str) -> tuple[bool, int]:

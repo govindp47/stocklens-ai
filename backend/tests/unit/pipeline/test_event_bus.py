@@ -13,13 +13,12 @@ import pytest
 
 from app.infrastructure.event_bus import RedisEventBus
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Dual-write behaviour
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_event_published_to_both_pubsub_and_list(redis: object) -> None:  # type: ignore[type-arg]
     """Every publish() call must write to both the Pub/Sub channel and the List."""
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
@@ -35,7 +34,7 @@ async def test_event_published_to_both_pubsub_and_list(redis: object) -> None:  
     assert parsed["step_name"] == "ticker_validator"
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_buffered_events_order_preserved(redis: object) -> None:  # type: ignore[type-arg]
     """Events must be returned from get_buffered_events in insertion order."""
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
@@ -52,7 +51,7 @@ async def test_buffered_events_order_preserved(redis: object) -> None:  # type: 
         assert parsed["step_index"] == i
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_multiple_publish_appends_to_list(redis: object) -> None:  # type: ignore[type-arg]
     """Calling publish() N times results in N entries in the List."""
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
@@ -65,7 +64,7 @@ async def test_multiple_publish_appends_to_list(redis: object) -> None:  # type:
     assert len(buffered) == 3
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_buffered_events_empty_for_unknown_run(redis: object) -> None:  # type: ignore[type-arg]
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
     buffered = await bus.get_buffered_events(uuid4())
@@ -77,7 +76,7 @@ async def test_buffered_events_empty_for_unknown_run(redis: object) -> None:  # 
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_list_ttl_set_after_publish(redis: object) -> None:  # type: ignore[type-arg]
     """The Redis List key must have a TTL set to ≤25 h after the first write."""
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
@@ -95,27 +94,41 @@ async def test_list_ttl_set_after_publish(redis: object) -> None:  # type: ignor
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_sentinel_key_set_on_pipeline_complete(redis: object) -> None:  # type: ignore[type-arg]
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
     run_id = uuid4()
 
-    await bus.publish(run_id, {"type": "pipeline_complete", "run_id": str(run_id), "steps_completed": 9})
+    await bus.publish(
+        run_id,
+        {
+            "type": "pipeline_complete",
+            "run_id": str(run_id),
+            "steps_completed": 9,
+        },
+    )
 
     assert await bus.is_run_complete(run_id)
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_sentinel_key_set_on_pipeline_failed(redis: object) -> None:  # type: ignore[type-arg]
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
     run_id = uuid4()
 
-    await bus.publish(run_id, {"type": "pipeline_failed", "run_id": str(run_id), "reason": "critical step"})
+    await bus.publish(
+        run_id,
+        {
+            "type": "pipeline_failed",
+            "run_id": str(run_id),
+            "reason": "critical step",
+        },
+    )
 
     assert await bus.is_run_complete(run_id)
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_sentinel_key_set_on_pipeline_timeout(redis: object) -> None:  # type: ignore[type-arg]
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
     run_id = uuid4()
@@ -125,7 +138,7 @@ async def test_sentinel_key_set_on_pipeline_timeout(redis: object) -> None:  # t
     assert await bus.is_run_complete(run_id)
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_sentinel_not_set_for_step_events(redis: object) -> None:  # type: ignore[type-arg]
     """Non-terminal events must NOT set the sentinel key."""
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
@@ -137,13 +150,20 @@ async def test_sentinel_not_set_for_step_events(redis: object) -> None:  # type:
     assert not await bus.is_run_complete(run_id)
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_sentinel_key_ttl_set(redis: object) -> None:  # type: ignore[type-arg]
     """The sentinel key must also carry a TTL."""
     bus = RedisEventBus(redis)  # type: ignore[arg-type]
     run_id = uuid4()
 
-    await bus.publish(run_id, {"type": "pipeline_complete", "run_id": str(run_id), "steps_completed": 9})
+    await bus.publish(
+        run_id,
+        {
+            "type": "pipeline_complete",
+            "run_id": str(run_id),
+            "steps_completed": 9,
+        },
+    )
 
     sentinel_key = f"run:complete:{run_id}"
     ttl = await redis.ttl(sentinel_key)  # type: ignore[union-attr]

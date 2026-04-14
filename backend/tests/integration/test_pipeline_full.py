@@ -50,7 +50,6 @@ from app.pipeline.steps.report_assembler import ReportAssembler
 from app.pipeline.steps.sentiment_classifier import SentimentClassifier
 from app.pipeline.steps.ticker_validator import TickerValidator
 
-
 # ── Mock data ──────────────────────────────────────────────────────────────────
 
 _MOCK_COMPANY_INFO = CompanyInfo(
@@ -103,38 +102,46 @@ _MOCK_ARTICLES = [
 ]
 
 # Valid JSON responses the mock LLM returns for each step
-_SUMMARY_JSON = json.dumps({
-    "summary": "Apple reported strong quarterly earnings beating analyst expectations.",
-    "key_topics": ["Earnings"],
-    "sentiment_label": "positive",
-    "confidence_score": 0.85,
-})
+_SUMMARY_JSON = json.dumps(
+    {
+        "summary": "Apple reported strong quarterly earnings beating analyst expectations.",
+        "key_topics": ["Earnings"],
+        "sentiment_label": "positive",
+        "confidence_score": 0.85,
+    }
+)
 
-_SENTIMENT_JSON = json.dumps({
-    "label": "positive",
-    "score": 0.82,
-})
+_SENTIMENT_JSON = json.dumps(
+    {
+        "label": "positive",
+        "score": 0.82,
+    }
+)
 
-_EVENTS_JSON = json.dumps({
-    "events": [
-        {
-            "event_type": "Earnings Announcement",
-            "description": "Apple Q4 earnings beat expectations",
-            "date": "2024-01-15",
-            "significance": "high",
-            "source_article_indices": [0],
-        }
-    ]
-})
+_EVENTS_JSON = json.dumps(
+    {
+        "events": [
+            {
+                "event_type": "Earnings Announcement",
+                "description": "Apple Q4 earnings beat expectations",
+                "date": "2024-01-15",
+                "significance": "high",
+                "source_article_indices": [0],
+            }
+        ]
+    }
+)
 
-_INSIGHTS_JSON = json.dumps({
-    "executive_summary": "Apple shows strong performance with record revenue.",
-    "market_position": "Apple maintains dominant market position in premium segments.",
-    "risk_factors": "Regulatory and supply chain risks remain key concerns.",
-    "growth_catalysts": "Services revenue and iPhone growth drive outlook.",
-    "technical_outlook": "Stock shows upward momentum with strong fundamentals.",
-    "investment_considerations": "Long-term fundamentals remain solid despite headwinds.",
-})
+_INSIGHTS_JSON = json.dumps(
+    {
+        "executive_summary": "Apple shows strong performance with record revenue.",
+        "market_position": "Apple maintains dominant market position in premium segments.",
+        "risk_factors": "Regulatory and supply chain risks remain key concerns.",
+        "growth_catalysts": "Services revenue and iPhone growth drive outlook.",
+        "technical_outlook": "Stock shows upward momentum with strong fundamentals.",
+        "investment_considerations": "Long-term fundamentals remain solid despite headwinds.",
+    }
+)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -169,10 +176,10 @@ def _build_happy_llm_provider() -> MagicMock:
     # Return different JSON depending on call order (summarize x5, sentiment x5,
     # events x1, insights x1). Use side_effect list.
     responses = (
-        [_SUMMARY_JSON] * 5       # ArticleSummarizer (one per article)
-        + [_SENTIMENT_JSON] * 5   # SentimentClassifier (one per article)
-        + [_EVENTS_JSON]          # EventExtractor (corpus call)
-        + [_INSIGHTS_JSON]        # InsightGenerator
+        [_SUMMARY_JSON] * 5  # ArticleSummarizer (one per article)
+        + [_SENTIMENT_JSON] * 5  # SentimentClassifier (one per article)
+        + [_EVENTS_JSON]  # EventExtractor (corpus call)
+        + [_INSIGHTS_JSON]  # InsightGenerator
     )
     provider.complete = AsyncMock(side_effect=responses)
     return provider
@@ -231,9 +238,8 @@ def _build_orchestrator(
 # ── Tests ──────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestFullPipelineHappyPath:
-
     async def test_nine_step_pipeline_completes_with_full_report(
         self,
         db_pool: asyncpg.Pool,  # type: ignore[type-arg]
@@ -251,13 +257,20 @@ class TestFullPipelineHappyPath:
 
         report_repo = ReportRepository(pool=db_pool)
         orchestrator = _build_orchestrator(
-            db_pool, redis_api, prompt_loader,
-            market_provider, news_provider, ticker_cache,
+            db_pool,
+            redis_api,
+            prompt_loader,
+            market_provider,
+            news_provider,
+            ticker_cache,
         )
 
         await report_repo.create_run(
-            run_id=run_id, ticker=ticker,
-            ip_address="127.0.0.1", llm_provider="ollama", llm_model="test-model",
+            run_id=run_id,
+            ticker=ticker,
+            ip_address="127.0.0.1",
+            llm_provider="ollama",
+            llm_model="test-model",
         )
 
         await orchestrator.run(run_id, ticker, llm_provider)
@@ -270,7 +283,8 @@ class TestFullPipelineHappyPath:
                 run_id,
             )
             step_rows = await conn.fetch(
-                "SELECT step_name, status FROM pipeline_steps WHERE run_id = $1 ORDER BY step_index",
+                "SELECT step_name, status FROM pipeline_steps WHERE run_id = $1 "
+                "ORDER BY step_index",
                 run_id,
             )
 
@@ -309,13 +323,20 @@ class TestFullPipelineHappyPath:
 
         report_repo = ReportRepository(pool=db_pool)
         orchestrator = _build_orchestrator(
-            db_pool, redis_api, prompt_loader,
-            market_provider, news_provider, ticker_cache,
+            db_pool,
+            redis_api,
+            prompt_loader,
+            market_provider,
+            news_provider,
+            ticker_cache,
         )
 
         await report_repo.create_run(
-            run_id=run_id, ticker=ticker,
-            ip_address="127.0.0.1", llm_provider="ollama", llm_model="test-model",
+            run_id=run_id,
+            ticker=ticker,
+            ip_address="127.0.0.1",
+            llm_provider="ollama",
+            llm_model="test-model",
         )
 
         await orchestrator.run(run_id, ticker, llm_provider)
@@ -327,23 +348,19 @@ class TestFullPipelineHappyPath:
                 run_id,
             )
 
-        assert run_row is not None and run_row["report_data"] is not None
+        assert run_row is not None
+        assert run_row["report_data"] is not None
         report = json.loads(run_row["report_data"])
 
         sentiment = report.get("sentiment", {})
         if sentiment.get("available"):
             dist = sentiment.get("distribution", {})
-            total = (
-                dist.get("positive", 0)
-                + dist.get("negative", 0)
-                + dist.get("neutral", 0)
-            )
+            total = dist.get("positive", 0) + dist.get("negative", 0) + dist.get("neutral", 0)
             assert total == 100, f"Sentiment distribution sums to {total}, expected 100"
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestFullPipelineDegradedPath:
-
     async def test_llm_failure_pipeline_still_completes(
         self,
         db_pool: asyncpg.Pool,  # type: ignore[type-arg]
@@ -351,7 +368,7 @@ class TestFullPipelineDegradedPath:
     ) -> None:
         """When LLM always fails, the pipeline still reaches 'complete' status.
 
-        Steps 1–4 succeed (no LLM calls). Steps 5–8 handle LLM errors gracefully
+        Steps 1-4 succeed (no LLM calls). Steps 5-8 handle LLM errors gracefully
         at the per-article level and return non-critical COMPLETE results with
         degraded content. Step 9 (ReportAssembler, critical) completes with
         pure computation. The run status is 'complete' with a valid report.
@@ -370,13 +387,20 @@ class TestFullPipelineDegradedPath:
 
         report_repo = ReportRepository(pool=db_pool)
         orchestrator = _build_orchestrator(
-            db_pool, redis_api, prompt_loader,
-            market_provider, news_provider, ticker_cache,
+            db_pool,
+            redis_api,
+            prompt_loader,
+            market_provider,
+            news_provider,
+            ticker_cache,
         )
 
         await report_repo.create_run(
-            run_id=run_id, ticker=ticker,
-            ip_address="127.0.0.1", llm_provider="ollama", llm_model="test-model",
+            run_id=run_id,
+            ticker=ticker,
+            ip_address="127.0.0.1",
+            llm_provider="ollama",
+            llm_model="test-model",
         )
 
         await orchestrator.run(run_id, ticker, llm_provider)

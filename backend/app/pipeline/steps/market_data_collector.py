@@ -16,7 +16,7 @@ import statistics
 import time
 
 from app.domain.models.market import PriceHistory, PricePoint
-from app.infrastructure.providers.market_data import YFinanceMarketDataProvider
+from app.infrastructure.providers.market_data_provider import MarketDataProvider
 from app.pipeline.context import PipelineContext
 from app.pipeline.steps.base import BasePipelineStep, StepResult, StepStatus
 
@@ -98,7 +98,7 @@ class MarketDataCollector(BasePipelineStep):
     critical: bool = False
     max_retries: int = 2
 
-    def __init__(self, market_data_provider: YFinanceMarketDataProvider) -> None:
+    def __init__(self, market_data_provider: MarketDataProvider) -> None:
         self._provider = market_data_provider
 
     # ──────────────────────────────────────────────────────────────────────
@@ -137,7 +137,7 @@ class MarketDataCollector(BasePipelineStep):
                 step_index=self.step_index,
                 status=StepStatus.FAILED,
                 duration_ms=duration_ms,
-                output_summary="MARKET_DATA_UNAVAILABLE: yfinance returned no quote data",
+                output_summary="MARKET_DATA_UNAVAILABLE: market provider returned no quote data",
             )
 
         context.outputs.market_data = quote
@@ -150,9 +150,7 @@ class MarketDataCollector(BasePipelineStep):
 
         duration_ms = int(time.monotonic() * 1000) - start_ms
         history_points = (
-            len(context.outputs.price_history.datapoints)
-            if context.outputs.price_history
-            else 0
+            len(context.outputs.price_history.datapoints) if context.outputs.price_history else 0
         )
         trend = (
             context.outputs.price_history.trend_direction
@@ -174,9 +172,7 @@ class MarketDataCollector(BasePipelineStep):
             step_index=self.step_index,
             status=StepStatus.COMPLETE,
             duration_ms=duration_ms,
-            output_summary=(
-                f"price={quote.price} trend={trend} points={history_points}"
-            ),
+            output_summary=(f"price={quote.price} trend={trend} points={history_points}"),
         )
 
     # ──────────────────────────────────────────────────────────────────────

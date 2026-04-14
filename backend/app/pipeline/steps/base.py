@@ -51,7 +51,7 @@ class StepFailure:
 class PipelineStep(Protocol):
     """Structural interface that every pipeline step must satisfy.
 
-    The orchestrator (T-017) drives execution through this Protocol.
+    The orchestrator drives execution through this Protocol.
     Concrete steps should extend ``BasePipelineStep`` to inherit the
     default ``can_execute`` implementation; steps with non-trivial
     prerequisites override it.
@@ -59,8 +59,8 @@ class PipelineStep(Protocol):
 
     name: str
     step_index: int
-    critical: bool          # if True, failure halts the entire pipeline
-    max_retries: int        # 0 = no retry; ≥1 = retry on retryable failure
+    critical: bool  # if True, failure halts the entire pipeline
+    max_retries: int  # 0 = no retry; ≥1 = retry on retryable failure
 
     async def execute(self, context: PipelineContext) -> StepResult:
         """Run the step logic and return a StepResult."""
@@ -83,6 +83,6 @@ class BasePipelineStep:
     ``context.outputs``.
     """
 
-    def can_execute(self, context: PipelineContext) -> bool:  # noqa: ARG002
+    def can_execute(self, context: PipelineContext) -> bool:
         """Default: always executable."""
         return True

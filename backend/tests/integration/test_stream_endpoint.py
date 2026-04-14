@@ -11,7 +11,7 @@ The stream tests use httpx streaming support to read SSE events line by line.
 from __future__ import annotations
 
 import json
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import asyncpg
 import fakeredis.aioredis as fakeredis
@@ -21,12 +21,9 @@ from httpx import AsyncClient
 from app.infrastructure.event_bus import RedisEventBus
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestStreamEndpoint:
-
-    async def test_sse_returns_404_for_unknown_run(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_sse_returns_404_for_unknown_run(self, client: AsyncClient) -> None:
         """GET /analyze/stream with an unknown run_id returns 404."""
         unknown_id = uuid4()
         response = await client.get(f"/api/v1/analyze/stream/{unknown_id}")
@@ -168,7 +165,7 @@ def _parse_sse_events(text: str) -> list[dict[str, object]]:
     for line in text.splitlines():
         line = line.strip()
         if line.startswith("data: "):
-            payload = line[len("data: "):]
+            payload = line[len("data: ") :]
             try:
                 events.append(json.loads(payload))
             except json.JSONDecodeError:

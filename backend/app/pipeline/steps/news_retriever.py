@@ -60,9 +60,7 @@ class NewsRetriever(BasePipelineStep):
         """
         ticker = context.ticker
         company_info = context.outputs.company_info
-        company_name: str = (
-            company_info.name or ticker if company_info is not None else ticker
-        )
+        company_name: str = company_info.name or ticker if company_info is not None else ticker
         start_ms = int(time.monotonic() * 1000)
 
         logger.info(

@@ -52,7 +52,7 @@ class PromptLoader:
     def __init__(self, template_dir: str) -> None:
         self._env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dir),
-            autoescape=True,       # prevents prompt injection via article content
+            autoescape=True,  # prevents prompt injection via article content
             trim_blocks=True,
             lstrip_blocks=True,
         )

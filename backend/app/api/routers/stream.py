@@ -120,7 +120,7 @@ async def _event_generator(
         yield f"data: {_STREAM_END_PAYLOAD}\n\n"
         return
 
-    # ── Step 3–5: Live Pub/Sub stream ─────────────────────────────────────────
+    # ── Step 3-5: Live Pub/Sub stream ─────────────────────────────────────────
     pubsub = redis.pubsub()
     try:
         await pubsub.subscribe(channel)

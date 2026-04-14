@@ -16,7 +16,6 @@ from app.pipeline.steps.market_data_collector import (
     _compute_volatility_flag,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -52,7 +51,7 @@ def _make_datapoints(closes: list[float]) -> list[PricePoint]:
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         collector = _make_collector()
@@ -65,7 +64,7 @@ class TestMetadata:
 # ── can_execute ───────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCanExecute:
     def test_can_execute_false_without_company_info(self) -> None:
         collector = _make_collector()
@@ -81,7 +80,7 @@ class TestCanExecute:
 # ── execute — failure path ────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestExecuteFailurePath:
     async def test_step_fails_noncritically_when_quote_unavailable(self) -> None:
         collector = _make_collector(quote=None, history=None)
@@ -107,7 +106,7 @@ class TestExecuteFailurePath:
 # ── execute — success path ────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestExecuteSuccessPath:
     async def test_quote_stored_in_context(self) -> None:
         quote = MarketData(available=True, price=175.0)
@@ -147,7 +146,7 @@ class TestExecuteSuccessPath:
 # ── Trend direction ───────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestTrendDirection:
     def test_trend_direction_upward(self) -> None:
         """Strongly rising prices → 'upward'."""
@@ -193,7 +192,7 @@ class TestTrendDirection:
 # ── Volatility flag ───────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestVolatilityFlag:
     def test_volatility_flag_above_3_percent(self) -> None:
         """Large daily swings → flag = True."""
@@ -220,7 +219,7 @@ class TestVolatilityFlag:
 # ── Enrichment integration ────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEnrichment:
     async def test_trend_direction_recomputed_in_step(self) -> None:
         """The step overwrites the provider's trend_direction with regression result."""
@@ -229,9 +228,7 @@ class TestEnrichment:
         closes = [100.0 + i * 5 for i in range(20)]
         datapoints = _make_datapoints(closes)
         # Provider returns 'flat' (its simple estimate); step must recompute
-        history = PriceHistory(
-            available=True, datapoints=datapoints, trend_direction="flat"
-        )
+        history = PriceHistory(available=True, datapoints=datapoints, trend_direction="flat")
         collector = _make_collector(quote=quote, history=history)
         ctx = _make_context()
 

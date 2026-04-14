@@ -4,35 +4,329 @@
 
 /* ── Semantic color tokens (light mode) ──────────────────────────────────── */
 :root {
-  /* Brand palette */
-  --brand-50: 210 100% 97%;
-  --brand-500: 210 100% 50%;
-  --brand-900: 210 100% 20%;
+  /* Brand palette — rich deep teal for financial data products */
+  --brand-50: 174 60% 94%;
+  --brand-100: 174 55% 85%;
+  --brand-200: 174 52% 70%;
+  --brand-500: 174 72% 36%;
+  --brand-600: 174 76% 30%;
+  --brand-700: 174 80% 24%;
+  --brand-900: 174 84% 14%;
 
   /* Sentiment indicators */
-  --sentiment-positive: 142 76% 36%;
-  --sentiment-neutral: 43 96% 56%;
-  --sentiment-negative: 0 84% 60%;
+  --sentiment-positive: 152 60% 38%;
+  --sentiment-neutral: 38 86% 46%;
+  --sentiment-negative: 4 78% 52%;
 
-  /* Surface & text */
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --border: 214.3 31.8% 91.4%;
+  /* Surface & text — warm cream palette */
+  --background: 36 20% 96%;
+  --foreground: 240 18% 8%;
+  --border: 36 12% 88%;
+  --surface: 36 30% 99%;
+  --surface-raised: 36 20% 97%;
+
+  /* Muted */
+  --muted: 36 14% 93%;
+  --muted-foreground: 240 8% 46%;
+
+  /* Accent — warm honey tint */
+  --accent: 38 60% 94%;
+  --accent-foreground: 38 50% 32%;
 }
 
-/* ── Dark mode (class-based toggle; prefers-color-scheme as fallback) ─────── */
+/* ── Dark mode (auto via system preference) ────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --sentiment-positive: 142 76% 50%;
-    --sentiment-neutral: 43 96% 70%;
-    --sentiment-negative: 0 84% 70%;
+    --background: 252 24% 4%;
+    --foreground: 210 30% 94%;
+    --border: 252 20% 14%;
+    --surface: 252 22% 7%;
+    --surface-raised: 252 20% 10%;
+    --muted: 252 16% 12%;
+    --muted-foreground: 252 10% 54%;
+
+    --brand-50: 186 80% 8%;
+    --brand-100: 186 70% 14%;
+    --brand-200: 186 65% 25%;
+    --brand-500: 186 80% 52%;
+    --brand-600: 186 82% 44%;
+    --brand-700: 186 78% 36%;
+    --brand-900: 186 70% 20%;
+
+    --sentiment-positive: 152 65% 55%;
+    --sentiment-neutral: 38 80% 62%;
+    --sentiment-negative: 4 70% 62%;
+
+    --accent: 36 30% 12%;
+    --accent-foreground: 38 65% 72%;
+  }
+}
+
+/* ── Dark mode (manual class override — wins over media query) ─────────────── */
+html.dark {
+  --background: 252 24% 4%;
+  --foreground: 210 30% 94%;
+  --border: 252 20% 14%;
+  --surface: 252 22% 7%;
+  --surface-raised: 252 20% 10%;
+  --muted: 252 16% 12%;
+  --muted-foreground: 252 10% 54%;
+
+  --brand-50: 186 80% 8%;
+  --brand-100: 186 70% 14%;
+  --brand-200: 186 65% 25%;
+  --brand-500: 186 80% 52%;
+  --brand-600: 186 82% 44%;
+  --brand-700: 186 78% 36%;
+  --brand-900: 186 70% 20%;
+
+  --sentiment-positive: 152 65% 55%;
+  --sentiment-neutral: 38 80% 62%;
+  --sentiment-negative: 4 70% 62%;
+
+  --accent: 36 30% 12%;
+  --accent-foreground: 38 65% 72%;
+}
+
+/* ── Light mode (manual class override — forces light even if system is dark) ─ */
+html.light {
+  --brand-50: 174 60% 94%;
+  --brand-100: 174 55% 85%;
+  --brand-200: 174 52% 70%;
+  --brand-500: 174 72% 36%;
+  --brand-600: 174 76% 30%;
+  --brand-700: 174 80% 24%;
+  --brand-900: 174 84% 14%;
+
+  --background: 36 20% 96%;
+  --foreground: 240 18% 8%;
+  --border: 36 12% 88%;
+  --surface: 36 30% 99%;
+  --surface-raised: 36 20% 97%;
+  --muted: 36 14% 93%;
+  --muted-foreground: 240 8% 46%;
+
+  --sentiment-positive: 152 60% 38%;
+  --sentiment-neutral: 38 86% 46%;
+  --sentiment-negative: 4 78% 52%;
+
+  --accent: 38 60% 94%;
+  --accent-foreground: 38 50% 32%;
+}
+
+/* ── Animation keyframes ──────────────────────────────────────────────────── */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+    width: 30%;
+  }
+  50% {
+    width: 60%;
+  }
+  100% {
+    transform: translateX(400%);
+    width: 30%;
+  }
+}
+
+@keyframes step-pop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes step-complete {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes timeline-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fade-in-up 0.35s ease-out forwards;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out forwards;
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 0.25s ease-out forwards;
+  }
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--background)) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+  .animate-step-pop {
+    animation: step-pop 0.3s ease-out forwards;
+  }
+  .animate-step-complete {
+    animation: step-complete 0.4s ease-out forwards;
+  }
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  .animate-progress-indeterminate {
+    animation: progress-indeterminate 1.4s ease-in-out infinite;
+  }
+  .animate-timeline-in {
+    animation: timeline-in 0.25s ease-out forwards;
+  }
+}
+
+/* ── Reduced motion — disable all entrance animations ────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-slide-in-left,
+  .animate-step-pop,
+  .animate-step-complete,
+  .animate-timeline-in,
+  .animate-float {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .animate-shimmer {
+    animation: none;
+    background: hsl(var(--muted));
+  }
+  .animate-progress-indeterminate {
+    animation: none;
   }
 }
 
 /* ── Base resets ──────────────────────────────────────────────────────────── */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* ── Focus ring global standard ───────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid hsl(var(--brand-500));
+  outline-offset: 2px;
+}
+
+/* ── Selection color ──────────────────────────────────────────────────────── */
+::selection {
+  background: hsl(var(--brand-200));
+  color: hsl(var(--brand-900));
+}
+
+/* ── Scrollbar styling ────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }

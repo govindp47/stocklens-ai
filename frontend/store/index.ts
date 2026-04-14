@@ -10,10 +10,10 @@
  * a single slice, avoiding unnecessary re-renders from unrelated state changes.
  */
 
-import { create } from 'zustand';
-import { createAnalysisSlice, type AnalysisState } from './analysisSlice';
-import { createSettingsSlice, type SettingsState } from './settingsSlice';
-import { createUISlice, type UIState } from './uiSlice';
+import { create } from "zustand";
+import { createAnalysisSlice, type AnalysisState } from "./analysisSlice";
+import { createSettingsSlice, type SettingsState } from "./settingsSlice";
+import { createUISlice, type UIState } from "./uiSlice";
 
 // ─── Combined store type ──────────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ export const useAnalysisStore = () =>
     completeness: s.completeness,
     errorMessage: s.errorMessage,
     startAnalysis: s.startAnalysis,
+    setRunId: s.setRunId,
     appendStepEvent: s.appendStepEvent,
     setPipelineComplete: s.setPipelineComplete,
     setPipelineFailed: s.setPipelineFailed,
@@ -61,9 +62,11 @@ export const useSettingsStore = () =>
     openAiKey: s.openAiKey,
     openAiKeyStatus: s.openAiKeyStatus,
     activeModel: s.activeModel,
+    selectedProvider: s.selectedProvider,
     setOpenAiKey: s.setOpenAiKey,
     clearOpenAiKey: s.clearOpenAiKey,
     markKeyInvalid: s.markKeyInvalid,
+    setProvider: s.setProvider,
   }));
 
 /** Hook that subscribes only to UI state fields. */
@@ -72,7 +75,10 @@ export const useUIStore = () =>
     panelExpansion: s.panelExpansion,
     activeTimeframe: s.activeTimeframe,
     reasoningViewerExpanded: s.reasoningViewerExpanded,
+    progressExpanded: s.progressExpanded,
     togglePanel: s.togglePanel,
     setTimeframe: s.setTimeframe,
     toggleReasoningViewer: s.toggleReasoningViewer,
+    toggleProgressExpanded: s.toggleProgressExpanded,
+    setProgressExpanded: s.setProgressExpanded,
   }));

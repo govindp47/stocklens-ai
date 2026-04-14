@@ -15,7 +15,6 @@ from app.pipeline.context import PipelineContext, PipelineOutputs
 from app.pipeline.steps.base import StepStatus
 from app.pipeline.steps.news_retriever import NewsRetriever
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 
@@ -60,7 +59,7 @@ def _make_article(n: int = 1) -> RawArticle:
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         retriever = _make_retriever()
@@ -73,7 +72,7 @@ class TestMetadata:
 # ── can_execute ───────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCanExecute:
     def test_can_execute_requires_company_info(self) -> None:
         retriever = _make_retriever()
@@ -89,7 +88,7 @@ class TestCanExecute:
 # ── Zero articles is COMPLETE ─────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestZeroArticles:
     async def test_zero_articles_is_complete_not_failed(self) -> None:
         """get_articles returning [] must produce COMPLETE, not FAILED."""
@@ -122,7 +121,7 @@ class TestZeroArticles:
 # ── Articles stored ───────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestArticlesStored:
     async def test_articles_stored_in_context(self) -> None:
         articles = [_make_article(1), _make_article(2), _make_article(3)]
@@ -158,7 +157,7 @@ class TestArticlesStored:
 # ── Provider error → FAILED ───────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestProviderError:
     async def test_step_fails_on_provider_error(self) -> None:
         error = ExternalProviderError(
@@ -221,7 +220,7 @@ class TestProviderError:
 # ── Fallback when company_name is None ───────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCompanyNameFallback:
     async def test_ticker_used_as_company_name_when_name_is_none(self) -> None:
         """If CompanyInfo.name is None the ticker is used as the company name."""

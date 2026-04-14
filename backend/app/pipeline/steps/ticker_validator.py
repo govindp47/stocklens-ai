@@ -16,7 +16,7 @@ import time
 
 from app.domain.exceptions import ExternalProviderError, TickerNotResolvableError
 from app.domain.models.market import CompanyInfo
-from app.infrastructure.providers.market_data import YFinanceMarketDataProvider
+from app.infrastructure.providers.market_data_provider import MarketDataProvider
 from app.infrastructure.repositories.ticker_cache_repository import TickerCacheRepository
 from app.pipeline.context import PipelineContext
 from app.pipeline.steps.base import BasePipelineStep, StepResult, StepStatus
@@ -44,7 +44,7 @@ class TickerValidator(BasePipelineStep):
     def __init__(
         self,
         ticker_cache_repo: TickerCacheRepository,
-        market_data_provider: YFinanceMarketDataProvider,
+        market_data_provider: MarketDataProvider,
     ) -> None:
         self._ticker_cache_repo = ticker_cache_repo
         self._market_data_provider = market_data_provider
@@ -151,8 +151,7 @@ class TickerValidator(BasePipelineStep):
         ticker: str,
         context: PipelineContext,
     ) -> CompanyInfo:
-        """Fetch market quote, write the positive cache entry, and update context."""
-        quote = await self._market_data_provider.get_quote(ticker)
+        """Fetch company info, write the positive cache entry, and update context."""
 
         # Build CompanyInfo from quote-level metadata if available
         company_info_from_provider = await self._market_data_provider.get_company_info(ticker)
@@ -171,7 +170,5 @@ class TickerValidator(BasePipelineStep):
         )
 
         context.outputs.company_info = company_info
-        if quote is not None:
-            context.outputs.market_data = quote
 
         return company_info

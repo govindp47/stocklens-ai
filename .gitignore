@@ -21,6 +21,7 @@ htmlcov/
 backend/.env
 frontend/.env.local
 *.env
+env_backup/
 
 # ── Node / Next.js ────────────────────────────────────────────────────────────
 node_modules/

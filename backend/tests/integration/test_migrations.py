@@ -69,9 +69,7 @@ class TestUpgradeFromInitialSchema:
         """All five application tables must exist after alembic upgrade head."""
         async with db_pool.acquire() as conn:
             tables = await _table_names(conn)
-        assert EXPECTED_TABLES.issubset(tables), (
-            f"Missing tables: {EXPECTED_TABLES - tables}"
-        )
+        assert EXPECTED_TABLES.issubset(tables), f"Missing tables: {EXPECTED_TABLES - tables}"
 
     async def test_analysis_runs_has_required_columns(self, db_pool: asyncpg.Pool) -> None:  # type: ignore[type-arg]
         """analysis_runs must have run_id, ticker, status, and updated_at columns."""
@@ -114,15 +112,14 @@ class TestDowngradeAndUpgradeIsIdempotent:
         """Insert succeeds after clean_db truncation (RESTART IDENTITY is safe)."""
         async with db_pool.acquire() as conn:
             run_id = await _insert_run(conn)
-            row = await conn.fetchrow(
-                "SELECT run_id FROM analysis_runs WHERE run_id = $1", run_id
-            )
+            row = await conn.fetchrow("SELECT run_id FROM analysis_runs WHERE run_id = $1", run_id)
         assert row is not None
 
 
 class TestFkConstraintEnforced:
     async def test_pipeline_step_requires_valid_run_id(
-        self, db_pool: asyncpg.Pool  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,  # type: ignore[type-arg]
     ) -> None:
         """Inserting a pipeline_steps row with a non-existent run_id must fail."""
         ghost_run_id = uuid.uuid4()
@@ -154,9 +151,7 @@ class TestFkConstraintEnforced:
             assert count_before == 2
 
             # Delete parent
-            await conn.execute(
-                "DELETE FROM analysis_runs WHERE run_id = $1", run_id
-            )
+            await conn.execute("DELETE FROM analysis_runs WHERE run_id = $1", run_id)
 
             # Children must be gone
             count_after = await conn.fetchval(

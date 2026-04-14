@@ -1,15 +1,11 @@
 /**
- * PriceDirection — conveys price change direction via color AND a directional
- * arrow icon. Never uses color alone (WCAG 2.1 AA requirement).
- *
- * aria-label reads "Up 1.23 percent", "Down 0.50 percent", or "Unchanged"
- * so screen readers get the same information sighted users see.
+ * PriceDirection — conveys price change direction via color AND icon.
+ * Never uses color alone (WCAG 2.1 AA).
  */
 
-import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 
 interface PriceDirectionProps {
-  /** Percentage change value (positive = up, negative = down, zero = flat). */
   changePct: number;
 }
 
@@ -18,31 +14,30 @@ export function PriceDirection({ changePct }: PriceDirectionProps) {
   const isFlat = changePct === 0;
   const abs = Math.abs(changePct);
 
-  const directionLabel = isUp ? 'Up' : isFlat ? 'Unchanged' : 'Down';
   const ariaLabel = isFlat
-    ? 'Unchanged'
-    : `${directionLabel} ${abs.toFixed(2)} percent`;
+    ? "Unchanged"
+    : `${isUp ? "Up" : "Down"} ${abs.toFixed(2)} percent`;
 
-  const colorClass = isUp
-    ? 'text-sentiment-positive'
+  const classes = isUp
+    ? "bg-green-50 text-green-700 border border-green-200"
     : isFlat
-      ? 'text-neutral-500'
-      : 'text-sentiment-negative';
+      ? "bg-muted text-muted-foreground border border-border"
+      : "bg-red-50 text-red-700 border border-red-200";
 
   return (
     <span
-      className={`inline-flex items-center gap-1 font-medium tabular-nums ${colorClass}`}
+      className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums animate-fade-in-up ${classes}`}
       aria-label={ariaLabel}
     >
       {isUp ? (
-        <ArrowUp className="w-3.5 h-3.5" aria-hidden="true" />
+        <ArrowUp className="h-3 w-3" aria-hidden="true" />
       ) : isFlat ? (
-        <Minus className="w-3.5 h-3.5" aria-hidden="true" />
+        <Minus className="h-3 w-3" aria-hidden="true" />
       ) : (
-        <ArrowDown className="w-3.5 h-3.5" aria-hidden="true" />
+        <ArrowDown className="h-3 w-3" aria-hidden="true" />
       )}
       <span aria-hidden="true">
-        {isUp ? '+' : isFlat ? '' : '-'}
+        {isUp ? "+" : isFlat ? "" : ""}
         {abs.toFixed(2)}%
       </span>
     </span>

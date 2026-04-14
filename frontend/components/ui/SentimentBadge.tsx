@@ -5,9 +5,9 @@
  * Each sentiment value has a distinct icon shape in addition to its color.
  */
 
-import { TrendingUp, Minus, TrendingDown } from 'lucide-react';
+import { TrendingUp, Minus, TrendingDown } from "lucide-react";
 
-export type SentimentLabel = 'positive' | 'neutral' | 'negative';
+export type SentimentLabel = "positive" | "neutral" | "negative";
 
 interface SentimentBadgeProps {
   sentiment: SentimentLabel | string;
@@ -17,49 +17,44 @@ const SENTIMENT_CONFIG: Record<
   SentimentLabel,
   {
     Icon: React.FC<React.SVGProps<SVGSVGElement>>;
-    colorClass: string;
-    bgClass: string;
+    classes: string;
     label: string;
   }
 > = {
   positive: {
     Icon: TrendingUp as React.FC<React.SVGProps<SVGSVGElement>>,
-    colorClass: 'text-sentiment-positive',
-    bgClass: 'bg-green-50',
-    label: 'Positive',
+    classes: "bg-green-50 text-green-700 border border-green-200",
+    label: "Positive",
   },
   neutral: {
     Icon: Minus as React.FC<React.SVGProps<SVGSVGElement>>,
-    colorClass: 'text-sentiment-neutral',
-    bgClass: 'bg-amber-50',
-    label: 'Neutral',
+    classes: "bg-amber-50 text-amber-700 border border-amber-200",
+    label: "Neutral",
   },
   negative: {
     Icon: TrendingDown as React.FC<React.SVGProps<SVGSVGElement>>,
-    colorClass: 'text-sentiment-negative',
-    bgClass: 'bg-red-50',
-    label: 'Negative',
+    classes: "bg-red-50 text-red-700 border border-red-200",
+    label: "Negative",
   },
 };
 
 const FALLBACK = {
   Icon: Minus as React.FC<React.SVGProps<SVGSVGElement>>,
-  colorClass: 'text-neutral-500',
-  bgClass: 'bg-neutral-50',
-  label: 'Unknown',
+  classes: "bg-muted text-muted-foreground border border-border",
+  label: "Unknown",
 };
 
 export function SentimentBadge({ sentiment }: SentimentBadgeProps) {
   const key = sentiment.toLowerCase() as SentimentLabel;
   const config = SENTIMENT_CONFIG[key] ?? { ...FALLBACK, label: sentiment };
-  const { Icon, colorClass, bgClass, label } = config;
+  const { Icon, classes, label } = config;
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorClass} ${bgClass}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${classes}`}
       aria-label={`Sentiment: ${label}`}
     >
-      <Icon className="w-3 h-3" aria-hidden="true" />
+      <Icon className="h-3 w-3" aria-hidden="true" />
       <span>{label}</span>
     </span>
   );

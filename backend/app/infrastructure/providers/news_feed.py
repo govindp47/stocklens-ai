@@ -29,23 +29,19 @@ logger = logging.getLogger(__name__)
 # Cache TTL: 30 minutes for news feeds (fresh-enough, avoids hammering RSS endpoints)
 _FEED_CACHE_TTL: int = 1_800
 
-# Hard cap on articles returned per call (before settings override)
-_MAX_ARTICLES_FALLBACK: int = 20
-
 
 # ── RSS feed templates ────────────────────────────────────────────────────────
 
 _GOOGLE_NEWS_URL = (
-    "https://news.google.com/rss/search"
-    "?q={ticker}+stock&hl=en-US&gl=US&ceid=US:en"
+    "https://news.google.com/rss/search" "?q={ticker}+stock&hl=en-US&gl=US&ceid=US:en"
 )
 _YAHOO_FINANCE_NEWS_URL = (
-    "https://feeds.finance.yahoo.com/rss/2.0/headline"
-    "?s={ticker}&region=US&lang=en-US"
+    "https://feeds.finance.yahoo.com/rss/2.0/headline" "?s={ticker}&region=US&lang=en-US"
 )
 
 
 # ── HTML stripping ────────────────────────────────────────────────────────────
+
 
 class _HTMLStripper(HTMLParser):
     """Minimal HTMLParser subclass that accumulates non-tag text."""
@@ -72,12 +68,14 @@ def _strip_html(text: str) -> str:
 
 # ── Article ID ────────────────────────────────────────────────────────────────
 
+
 def _article_id(url: str) -> str:
     """Return sha256(url)[:16] as a deterministic hex article ID."""
     return hashlib.sha256(url.encode()).hexdigest()[:16]
 
 
 # ── Provider ──────────────────────────────────────────────────────────────────
+
 
 class RSSNewsFeedProvider:
     """Async RSS news provider with executor-based feedparser calls and Redis caching."""
@@ -99,7 +97,7 @@ class RSSNewsFeedProvider:
         ticker: str,
         company_name: str,
     ) -> list[RawArticle]:
-        """Return relevance-filtered, recency-filtered, deduplicated articles.
+        """Return relevance-filtered, recency-filtered articles.
 
         Fetches both RSS feed URLs concurrently via asyncio.gather.
         Results are cached in Redis for 30 minutes per ticker per calendar date.
@@ -126,13 +124,11 @@ class RSSNewsFeedProvider:
             self._parse_feed(yahoo_url),
         )
 
-        # Merge and deduplicate by URL
-        seen_urls: set[str] = set()
+        # Merge by valid URLs
         merged: list[dict[str, Any]] = []
         for entry in google_entries + yahoo_entries:
             url = entry.get("url", "")
-            if url and url not in seen_urls:
-                seen_urls.add(url)
+            if url:
                 merged.append(entry)
 
         # Filter, sort, cap
@@ -144,15 +140,15 @@ class RSSNewsFeedProvider:
                 articles.append(article)
 
         articles.sort(key=lambda a: a.published_at, reverse=True)
-        max_articles = self._settings.max_articles_per_run or _MAX_ARTICLES_FALLBACK
+        max_articles = self._settings.max_articles_per_run
         articles = articles[:max_articles]
 
         # Cache the result
         try:
             payload = json.dumps([a.model_dump(mode="json") for a in articles])
             await cache_set(self._redis, cache_key, payload, _FEED_CACHE_TTL)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to cache news feed for %s: %s", ticker, exc)
         return articles
 
     # ──────────────────────────────────────────────────────────────────────
@@ -176,9 +172,7 @@ class RSSNewsFeedProvider:
             link: str = getattr(entry, "link", "") or ""
             title: str = getattr(entry, "title", "") or ""
             summary: str = _strip_html(getattr(entry, "summary", "") or "")
-            source: str = (
-                getattr(getattr(feed, "feed", None), "title", "") or ""
-            )
+            source: str = getattr(getattr(feed, "feed", None), "title", "") or ""
             published_at = self._parse_date(entry)
             if published_at is None:
                 continue  # exclude articles with unparseable dates

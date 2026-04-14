@@ -26,8 +26,8 @@ from app.domain.exceptions import ExternalProviderError
 logger = logging.getLogger(__name__)
 
 # Redis TTL constants (seconds)
-_REDIS_TTL_RESOLVABLE: int = 3_600      # 1 hour
-_REDIS_TTL_NEGATIVE: int = 86_400       # 24 hours
+_REDIS_TTL_RESOLVABLE: int = 3_600  # 1 hour
+_REDIS_TTL_NEGATIVE: int = 86_400  # 24 hours
 
 # PostgreSQL TTL constants (timedelta)
 _PG_TTL_RESOLVABLE: timedelta = timedelta(hours=1)

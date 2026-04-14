@@ -9,23 +9,20 @@ Test cases from 09_TESTING_STRATEGY.md:
 
 from __future__ import annotations
 
-import asyncio
 import json
 from uuid import UUID, uuid4
 
 import asyncpg
-import fakeredis.aioredis as fakeredis
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.api.routers import results
 
-
 # ── Test app fixture ───────────────────────────────────────────────────────────
 
 
-@pytest.fixture
+@pytest.fixture()
 async def results_client(
     db_pool: asyncpg.Pool,  # type: ignore[type-arg]
 ) -> AsyncClient:  # type: ignore[misc]
@@ -45,7 +42,10 @@ _SAMPLE_REPORT = {
     "ticker": "AAPL",
     "completeness": "complete",
     "content_hash": "deadbeef1234",
-    "sentiment": {"available": True, "distribution": {"positive": 60, "negative": 20, "neutral": 20}},
+    "sentiment": {
+        "available": True,
+        "distribution": {"positive": 60, "negative": 20, "neutral": 20},
+    },
 }
 
 
@@ -67,16 +67,19 @@ async def _insert_run(
                  steps_failed, report_data, is_deleted)
             VALUES ($1, $2, $3, 'ollama', 9, 9, 0, $4::jsonb, $5)
             """,
-            run_id, ticker, status, report_json, is_deleted,
+            run_id,
+            ticker,
+            status,
+            report_json,
+            is_deleted,
         )
 
 
 # ── Tests ──────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestGetResultsEndpoint:
-
     async def test_get_results_returns_complete_report(
         self,
         results_client: AsyncClient,

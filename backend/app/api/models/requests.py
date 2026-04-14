@@ -9,10 +9,10 @@ import re
 
 from pydantic import BaseModel, field_validator
 
-# Ticker regex from 07_SECURITY_MODEL.md § 2:
-# Allows 1–5 uppercase letters, optionally followed by a dot and 1–3 uppercase letters.
+# Ticker regex validation:
+# Allows 1-20 uppercase letters, optionally followed by a dot and 1-5 uppercase letters.
 # Examples: AAPL, BRK.B, GOOGL.  Rejects: 123, aapl, TOOLONG, $$$.
-_TICKER_RE: re.Pattern[str] = re.compile(r"^[A-Z]{1,5}(\.[A-Z]{1,3})?$")
+_TICKER_RE: re.Pattern[str] = re.compile(r"^[A-Z]{1,20}(\.[A-Z]{1,5})?$")
 
 
 class AnalyzeRequest(BaseModel):
@@ -37,10 +37,10 @@ class AnalyzeRequest(BaseModel):
     @field_validator("ticker")
     @classmethod
     def validate_ticker_format(cls, v: str) -> str:
-        """Enforce the ticker symbol regex: ^[A-Z]{1,5}(\\.[A-Z]{1,3})?$"""
+        """Enforce the ticker symbol regex: ^[A-Z]{1,20}(\\.[A-Z]{1,5})?$"""
         if not _TICKER_RE.match(v):
             raise ValueError(
-                "ticker must be 1–5 uppercase letters, optionally followed by "
-                "a dot and 1–3 uppercase letters (e.g. AAPL, BRK.B)"
+                "ticker must be 1-10 uppercase letters, optionally followed by "
+                "a dot and 1-3 uppercase letters (e.g. AAPL, BRK.B)"
             )
         return v

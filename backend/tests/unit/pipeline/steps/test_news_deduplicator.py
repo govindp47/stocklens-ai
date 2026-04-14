@@ -20,7 +20,6 @@ from app.pipeline.steps.news_deduplicator import (
     _simhash_dedup,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 _NOW = datetime(2024, 1, 15, tzinfo=UTC)
@@ -59,7 +58,7 @@ def _make_context(
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         dedup = NewsDeduplicator()
@@ -72,7 +71,7 @@ class TestMetadata:
 # ── can_execute ───────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCanExecute:
     def test_skipped_when_no_articles(self) -> None:
         """can_execute returns False when raw_articles is None (Step 3 not run)."""
@@ -95,7 +94,7 @@ class TestCanExecute:
 # ── Hamming distance ──────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestHammingDistance:
     def test_hamming_distance_zero_for_identical(self) -> None:
         assert _hamming_distance(0xDEADBEEF, 0xDEADBEEF) == 0
@@ -117,7 +116,7 @@ class TestHammingDistance:
 # ── SimHash ───────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSimHash:
     def test_simhash_deterministic(self) -> None:
         """Same input always produces the same fingerprint."""
@@ -159,7 +158,7 @@ class TestSimHash:
 # ── Pass 1: exact URL deduplication ──────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestExactUrlDedup:
     def test_exact_url_deduplication(self) -> None:
         """Two articles with the same URL: only the first is retained."""
@@ -186,7 +185,7 @@ class TestExactUrlDedup:
 # ── Pass 2: SimHash near-duplicate removal ────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSimHashDedup:
     def test_near_duplicate_simhash(self) -> None:
         """Titles differing only in capitalisation/punctuation are near-duplicates."""
@@ -224,7 +223,7 @@ class TestSimHashDedup:
 # ── Full execute flow ─────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestExecute:
     async def test_full_dedup_pass1_and_pass2(self) -> None:
         """Both passes run; duplicates from both passes are removed."""
@@ -277,7 +276,7 @@ class TestExecute:
 # ── Performance guard ─────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestPerformance:
     async def test_dedup_20_articles_under_100ms(self) -> None:
         """Deduplication of 20 articles must complete in < 100ms."""

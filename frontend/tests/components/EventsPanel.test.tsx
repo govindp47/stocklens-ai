@@ -2,15 +2,15 @@
  * EventsPanel acceptance tests.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 
 // ─── Empty state mock ──────────────────────────────────────────────────────────
 
-vi.mock('@/store', () => ({
+vi.mock("@/store", () => ({
   useAnalysisStore: () => ({
     events: { available: true, events: [] },
-    status: 'complete',
+    status: "complete",
   }),
   useUIStore: () => ({
     panelExpansion: { events: true },
@@ -18,13 +18,11 @@ vi.mock('@/store', () => ({
   }),
 }));
 
-import { EventsPanel } from '@/components/panels/EventsPanel';
+import { EventsPanel } from "@/components/panels/EventsPanel";
 
-describe('EventsPanel empty state', () => {
-  it('renders the exact empty state string', () => {
+describe("EventsPanel empty state", () => {
+  it("renders the exact empty state string", () => {
     render(<EventsPanel />);
-    expect(
-      screen.getByText('No significant events identified.'),
-    ).toBeDefined();
+    expect(screen.getByText("No significant events identified.")).toBeDefined();
   });
 });

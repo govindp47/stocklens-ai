@@ -52,9 +52,7 @@ class TestDatabaseLeastPrivilege:
         conn = await asyncpg.connect(dsn=_dsn())
         try:
             with pytest.raises(asyncpg.InsufficientPrivilegeError):
-                await conn.execute(
-                    "CREATE TABLE forbidden_ddl_test (id SERIAL PRIMARY KEY);"
-                )
+                await conn.execute("CREATE TABLE forbidden_ddl_test (id SERIAL PRIMARY KEY);")
         finally:
             await conn.close()
 
@@ -64,9 +62,7 @@ class TestDatabaseLeastPrivilege:
         conn = await asyncpg.connect(dsn=_dsn())
         try:
             with pytest.raises(asyncpg.InsufficientPrivilegeError):
-                await conn.execute(
-                    "ALTER TABLE analysis_runs ADD COLUMN forbidden_col TEXT;"
-                )
+                await conn.execute("ALTER TABLE analysis_runs ADD COLUMN forbidden_col TEXT;")
         finally:
             await conn.close()
 
@@ -81,9 +77,7 @@ class TestDatabaseLeastPrivilege:
                     "stocklens_app",
                     priv,
                 )
-                assert row["ok"] is True, (
-                    f"stocklens_app is missing {priv} on analysis_runs"
-                )
+                assert row["ok"] is True, f"stocklens_app is missing {priv} on analysis_runs"
         finally:
             await conn.close()
 
@@ -98,9 +92,7 @@ class TestDatabaseLeastPrivilege:
                     "stocklens_app",
                     priv,
                 )
-                assert row["ok"] is True, (
-                    f"stocklens_app is missing {priv} on pipeline_steps"
-                )
+                assert row["ok"] is True, f"stocklens_app is missing {priv} on pipeline_steps"
         finally:
             await conn.close()
 
@@ -115,9 +107,9 @@ class TestDatabaseLeastPrivilege:
                     "stocklens_app",
                     priv,
                 )
-                assert row["ok"] is True, (
-                    f"stocklens_app is missing {priv} on system_metrics_hourly"
-                )
+                assert (
+                    row["ok"] is True
+                ), f"stocklens_app is missing {priv} on system_metrics_hourly"
         finally:
             await conn.close()
 
@@ -132,9 +124,9 @@ class TestDatabaseLeastPrivilege:
                     "stocklens_app",
                     priv,
                 )
-                assert row["ok"] is True, (
-                    f"stocklens_app is missing {priv} on ticker_resolution_cache"
-                )
+                assert (
+                    row["ok"] is True
+                ), f"stocklens_app is missing {priv} on ticker_resolution_cache"
         finally:
             await conn.close()
 
@@ -150,9 +142,7 @@ class TestDatabaseLeastPrivilege:
                     "stocklens_app",
                     priv,
                 )
-                assert row["ok"] is True, (
-                    f"stocklens_app is missing {priv} on rate_limit_log"
-                )
+                assert row["ok"] is True, f"stocklens_app is missing {priv} on rate_limit_log"
 
             # Denied privileges
             for priv in ("UPDATE", "DELETE"):
@@ -161,9 +151,7 @@ class TestDatabaseLeastPrivilege:
                     "stocklens_app",
                     priv,
                 )
-                assert row["ok"] is False, (
-                    f"stocklens_app must NOT have {priv} on rate_limit_log"
-                )
+                assert row["ok"] is False, f"stocklens_app must NOT have {priv} on rate_limit_log"
         finally:
             await conn.close()
 
@@ -177,9 +165,7 @@ class TestDatabaseLeastPrivilege:
                 "SELECT has_sequence_privilege($1, 'analysis_runs_id_seq', 'USAGE') AS ok;",
                 "stocklens_app",
             )
-            assert row["ok"] is True, (
-                "stocklens_app is missing USAGE on analysis_runs_id_seq"
-            )
+            assert row["ok"] is True, "stocklens_app is missing USAGE on analysis_runs_id_seq"
         finally:
             await conn.close()
 
@@ -192,8 +178,8 @@ class TestDatabaseLeastPrivilege:
                 "SELECT has_schema_privilege($1, 'public', 'CREATE') AS ok;",
                 "stocklens_app",
             )
-            assert row["ok"] is False, (
-                "stocklens_app must NOT have CREATE privilege on schema public"
-            )
+            assert (
+                row["ok"] is False
+            ), "stocklens_app must NOT have CREATE privilege on schema public"
         finally:
             await conn.close()

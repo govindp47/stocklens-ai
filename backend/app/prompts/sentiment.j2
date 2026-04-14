@@ -1,15 +1,37 @@
-Classify the sentiment of the following financial news headline about {{ company_name }} ({{ ticker }}).
+You are a financial sentiment classification system.
 
-Use exactly one of these labels: positive, neutral, negative
-Provide a confidence score from 0.0 to 1.0.
+Task:
+- Classify sentiment as "positive", "neutral", or "negative"
+- Provide a confidence score between 0.0 and 1.0
 
-Consider: positive = good news for the company or its investors; negative = bad news; neutral = factual with no clear direction.
+RULES:
+- Output MUST be valid JSON only
+- No explanations or extra text
+- Use lowercase labels only
+- Score must be between 0.0 and 1.0
+- If uncertain, return "neutral"
 
-Headline: {{ title }}
-{% if summary %}Context: {{ summary }}{% endif %}
+GUIDELINES:
+- positive → growth, profit, upgrades
+- negative → loss, decline, risk, downgrade
+- neutral → factual or unclear impact
 
-Respond ONLY with valid JSON. Do not include any text before or after the JSON object.
+CONFIDENCE:
+- High clarity → ≥0.8
+- Moderate → 0.5-0.8
+- Low → ≤0.5
+
+INPUT:
+{{ company_name }} ({{ ticker }})
+
+{{ title }}
+
+{% if summary %}
+{{ summary[:300] }}
+{% endif %}
+
+OUTPUT:
 {
-  "sentiment": "positive|neutral|negative",
-  "score": 0.0
+  "sentiment": "positive",
+  "score": 0.85
 }

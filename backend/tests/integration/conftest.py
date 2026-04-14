@@ -22,13 +22,13 @@ from unittest.mock import MagicMock
 import fakeredis as _fakeredis
 import fakeredis.aioredis as fakeredis
 import pytest
-from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 
 from app.api.routers import analyze, health, stream
 
 
-@pytest.fixture
+@pytest.fixture()
 async def redis_api() -> fakeredis.FakeRedis:  # type: ignore[type-arg, misc]
     """In-process fakeredis with ``decode_responses=True`` for API-layer tests.
 
@@ -49,7 +49,7 @@ async def redis_api() -> fakeredis.FakeRedis:  # type: ignore[type-arg, misc]
     await client.aclose()
 
 
-@pytest.fixture
+@pytest.fixture()
 async def client(
     db_pool: object,
     redis_api: fakeredis.FakeRedis,  # type: ignore[type-arg]

@@ -13,12 +13,12 @@
  */
 export function formatPrice(
   value: number | null | undefined,
-  currency = 'USD',
-  locale = 'en-US',
+  currency = "USD",
+  locale = "en-US",
 ): string {
-  if (value == null) return 'N/A';
+  if (value == null) return "N/A";
   return new Intl.NumberFormat(locale, {
-    style: 'currency',
+    style: "currency",
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -34,14 +34,14 @@ export function formatPrice(
  */
 export function formatChangePct(
   value: number | null | undefined,
-  locale = 'en-US',
+  locale = "en-US",
 ): string {
-  if (value == null) return 'N/A';
+  if (value == null) return "N/A";
   const formatted = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Math.abs(value));
-  return `${value >= 0 ? '+' : '-'}${formatted}%`;
+  return `${value >= 0 ? "+" : "-"}${formatted}%`;
 }
 
 // ─── Large numbers (compact) ──────────────────────────────────────────────────
@@ -53,14 +53,14 @@ export function formatChangePct(
  */
 export function formatLargeNumber(
   value: number | null | undefined,
-  currency = 'USD',
-  locale = 'en-US',
+  currency = "USD",
+  locale = "en-US",
 ): string {
-  if (value == null) return 'N/A';
+  if (value == null) return "N/A";
   return new Intl.NumberFormat(locale, {
-    style: 'currency',
+    style: "currency",
     currency,
-    notation: 'compact',
+    notation: "compact",
     maximumFractionDigits: 2,
   }).format(value);
 }
@@ -73,11 +73,11 @@ export function formatLargeNumber(
  */
 export function formatVolume(
   value: number | null | undefined,
-  locale = 'en-US',
+  locale = "en-US",
 ): string {
-  if (value == null) return 'N/A';
+  if (value == null) return "N/A";
   return new Intl.NumberFormat(locale, {
-    notation: 'compact',
+    notation: "compact",
     maximumFractionDigits: 2,
   }).format(value);
 }
@@ -90,9 +90,9 @@ export function formatVolume(
  */
 export function formatRatio(
   value: number | null | undefined,
-  locale = 'en-US',
+  locale = "en-US",
 ): string {
-  if (value == null) return 'N/A';
+  if (value == null) return "N/A";
   return new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -107,19 +107,45 @@ export function formatRatio(
  */
 export function formatDate(
   isoDate: string | null | undefined,
-  locale = 'en-US',
+  locale = "en-US",
 ): string {
-  if (!isoDate) return 'N/A';
+  if (!isoDate) return "N/A";
   try {
     // Append T00:00:00 to avoid timezone-offset day-shift when parsing YYYY-MM-DD
     const date = new Date(`${isoDate}T00:00:00`);
     return new Intl.DateTimeFormat(locale, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     }).format(date);
   } catch {
     return isoDate;
+  }
+}
+
+/**
+ * Format an ISO 8601 datetime as a relative "time ago" string.
+ * e.g. "2 hours ago", "just now", "3 days ago"
+ */
+export function formatDistanceToNow(
+  isoDateTime: string | null | undefined,
+): string {
+  if (!isoDateTime) return "";
+  try {
+    const diff = Date.now() - new Date(isoDateTime).getTime();
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}mo ago`;
+    return `${Math.floor(months / 12)}y ago`;
+  } catch {
+    return "";
   }
 }
 
@@ -129,17 +155,17 @@ export function formatDate(
  */
 export function formatDateTime(
   isoDateTime: string | null | undefined,
-  locale = 'en-US',
+  locale = "en-US",
 ): string {
-  if (!isoDateTime) return 'N/A';
+  if (!isoDateTime) return "N/A";
   try {
     const date = new Date(isoDateTime);
     return new Intl.DateTimeFormat(locale, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     }).format(date);
   } catch {
     return isoDateTime;

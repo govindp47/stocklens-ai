@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.domain.exceptions import ExternalProviderError, LLMParseError
+from app.domain.exceptions import ExternalProviderError
 from app.domain.models.market import CompanyInfo
 from app.domain.models.news import RawArticle
 from app.infrastructure.providers.llm_parser import CORRECTIVE_HINT
@@ -19,7 +19,6 @@ from app.pipeline.steps.article_summarizer import (
     ArticleSummaryLLMOutput,
 )
 from app.pipeline.steps.base import StepStatus
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -68,7 +67,7 @@ def _make_summarizer(llm_response: str | None = None) -> tuple[ArticleSummarizer
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         summarizer, _ = _make_summarizer()
@@ -81,7 +80,7 @@ class TestMetadata:
 # ── can_execute ───────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCanExecute:
     def test_can_execute_false_when_no_articles(self) -> None:
         summarizer, _ = _make_summarizer()
@@ -102,7 +101,7 @@ class TestCanExecute:
 # ── Successful summarisation ───────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSuccessfulSummarisation:
     async def test_all_articles_summarized_on_success(self) -> None:
         """All articles produce ArticleSummary with summarization_failed=False."""
@@ -156,7 +155,7 @@ class TestSuccessfulSummarisation:
 # ── Per-article failure handling ──────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestPerArticleFailure:
     async def test_individual_article_failure_does_not_fail_step(self) -> None:
         """asyncio.gather(return_exceptions=True) isolates per-article exceptions."""
@@ -237,7 +236,7 @@ class TestPerArticleFailure:
 # ── Corrective retry ─────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCorrectiveRetry:
     async def test_corrective_retry_fires_on_parse_error(self) -> None:
         """On LLMParseError the step retries with CORRECTIVE_HINT appended."""
@@ -302,7 +301,7 @@ class TestCorrectiveRetry:
 # ── Topic validation ──────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestTopicValidation:
     def test_topics_validated_against_taxonomy(self) -> None:
         """Unknown topics are filtered out; at least 'Other' is always returned."""
@@ -323,18 +322,14 @@ class TestTopicValidation:
         assert output.topics == ["Other"]
 
     def test_empty_topics_maps_to_other(self) -> None:
-        output = ArticleSummaryLLMOutput.model_validate(
-            {"summary": "Summary.", "topics": []}
-        )
+        output = ArticleSummaryLLMOutput.model_validate({"summary": "Summary.", "topics": []})
         assert output.topics == ["Other"]
 
     async def test_unknown_topics_stored_as_other_in_article_summary(self) -> None:
         articles = [_make_article(1)]
         ctx = _make_context(articles=articles)
         ctx.llm_provider.complete = AsyncMock(
-            return_value=json.dumps(
-                {"summary": "Something.", "topics": ["FakeCategory"]}
-            )
+            return_value=json.dumps({"summary": "Something.", "topics": ["FakeCategory"]})
         )
 
         summarizer, _ = _make_summarizer()
@@ -348,7 +343,7 @@ class TestTopicValidation:
 # ── Output summary format ─────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestOutputSummary:
     async def test_output_summary_contains_counts(self) -> None:
         articles = [_make_article(1), _make_article(2)]

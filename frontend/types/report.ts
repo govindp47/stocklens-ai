@@ -65,6 +65,8 @@ export interface ArticleSummary {
   sentiment: string;
   sentiment_score: number;
   summarization_failed: boolean;
+  /** Number of source articles merged into this summary (shown when > 1). */
+  deduplication_count?: number;
 }
 
 export interface NewsCollection {
@@ -143,10 +145,33 @@ export interface AnalysisReport {
   insights: InsightsResult;
   data_sources: DataSource[];
   schema_version: string;
-  completeness: 'complete' | 'partial' | 'minimal';
+  completeness: "complete" | "partial" | "minimal";
   partial_data_notices: string[];
   error_notices: string[];
   content_hash: string | null;
+}
+
+// ─── Completed runs list (GET /api/v1/runs) ──────────────────────────────────
+
+export interface RunSummary {
+  run_id: string;
+  ticker: string;
+  status: string;
+  created_at: string; // ISO 8601
+  completed_at: string; // ISO 8601
+  duration_ms: number | null;
+  llm_provider: string;
+  llm_model: string | null;
+  steps_total: number;
+  steps_completed: number;
+  steps_failed: number;
+}
+
+export interface RunsListResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  runs: RunSummary[];
 }
 
 // ─── System metrics (GET /api/v1/metrics) ────────────────────────────────────

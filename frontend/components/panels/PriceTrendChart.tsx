@@ -1,75 +1,111 @@
-'use client';
+"use client";
 
 /**
  * PriceTrendChart — panel wrapping the Recharts line chart.
  *
  * Accessibility strategy:
- * - The Recharts SVG chart is wrapped in aria-hidden="true" — it conveys
- *   no information that is not already in the visually-hidden data table.
- * - A <table> with OHLCV data is rendered outside the dynamic import so it
- *   is available in the DOM at all times (including SSR).
- * - The dynamic import uses { ssr: false } to prevent Recharts hydration errors.
+ * - The Recharts SVG chart is wrapped in aria-hidden="true".
+ * - A <table> with OHLCV data is rendered in the DOM at all times (sr-only).
+ * - Dynamic import uses { ssr: false } to prevent Recharts hydration errors.
  */
 
-import dynamic from 'next/dynamic';
-import { useAnalysisStore } from '@/store';
-import { Panel } from '@/components/ui/Panel';
-import { PanelSkeleton } from '@/components/ui/PanelSkeleton';
-import { formatDate, formatPrice } from '@/lib/formatters';
+import dynamic from "next/dynamic";
+import { useAnalysisStore, useUIStore } from "@/store";
+import { Panel } from "@/components/ui/Panel";
+import { PanelSkeleton } from "@/components/ui/PanelSkeleton";
+import { formatDate, formatPrice } from "@/lib/formatters";
+import type { ActiveTimeframe } from "@/store/uiSlice";
 
-// ─── Dynamic import (no SSR) ──────────────────────────────────────────────────
+const PriceTrendChartClient = dynamic(() => import("./PriceTrendChartClient"), {
+  ssr: false,
+  loading: () => <PanelSkeleton rows={4} />,
+});
 
-const PriceTrendChartClient = dynamic(
-  () => import('./PriceTrendChartClient'),
-  {
-    ssr: false,
-    loading: () => <PanelSkeleton rows={4} />,
-  },
-);
+const TIMEFRAMES: ActiveTimeframe[] = ["1M", "3M"];
 
-// ─── Panel ────────────────────────────────────────────────────────────────────
+const TREND_LABELS: Record<string, { text: string; color: string }> = {
+  up: { text: "↑ Upward", color: "text-sentiment-positive" },
+  down: { text: "↓ Downward", color: "text-sentiment-negative" },
+  sideways: { text: "→ Sideways", color: "text-muted-foreground" },
+};
 
 export function PriceTrendChart() {
   const { priceHistory, status, company } = useAnalysisStore();
+  const { activeTimeframe, setTimeframe } = useUIStore();
 
   const panelStatus = (() => {
-    if (!priceHistory) return 'loading';
-    if (!priceHistory.available) return 'unavailable';
-    return 'populated';
+    if (!priceHistory) return "loading";
+    if (!priceHistory.available) return "unavailable";
+    return "populated";
   })();
 
-  const isLoading = status === 'loading' || (!priceHistory && status === 'streaming');
+  const isLoading =
+    !priceHistory && (status === "loading" || status === "streaming");
 
   return (
     <Panel id="price_chart" title="Price Trend" status={panelStatus}>
       {isLoading ? (
         <PanelSkeleton rows={4} />
       ) : !priceHistory?.available || priceHistory.datapoints.length === 0 ? (
-        <div className="p-4 text-sm text-neutral-500 text-center">
+        <div className="p-6 text-center text-xs text-muted-foreground">
           Price history unavailable for this ticker.
         </div>
       ) : (
-        <div className="px-2 pb-4 pt-2">
-          {/* ── Visual chart (aria-hidden — data is in the table below) ── */}
-          <div aria-hidden="true">
+        <div className="pb-3 pt-2">
+          {/* ── Timeframe toggles ─────────────────────────────────────── */}
+          <div className="flex items-center justify-between px-4 mb-3">
+            {/* Trend label */}
+            <div className="flex items-center gap-2">
+              {priceHistory.trend_direction && (
+                <span
+                  className={`text-xs font-semibold ${TREND_LABELS[priceHistory.trend_direction]?.color ?? "text-muted-foreground"}`}
+                >
+                  {TREND_LABELS[priceHistory.trend_direction]?.text ??
+                    `→ ${priceHistory.trend_direction}`}
+                </span>
+              )}
+              {priceHistory.volatility_flag && (
+                <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                  ⚠ Volatile
+                </span>
+              )}
+            </div>
+
+            {/* Timeframe buttons */}
+            <div
+              className="flex gap-0.5 rounded-lg border border-border bg-muted p-0.5"
+              role="group"
+              aria-label="Chart timeframe"
+            >
+              {TIMEFRAMES.map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
+                  aria-pressed={activeTimeframe === tf}
+                  className={`min-h-[28px] min-w-[32px] rounded-md px-2 py-1 text-xs font-medium transition-all duration-100
+                    focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-0
+                    ${
+                      activeTimeframe === tf
+                        ? "bg-surface text-brand-500 font-semibold shadow-panel"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Visual chart ────────────────────────────────────────────── */}
+          <div aria-hidden="true" className="px-1">
             <PriceTrendChartClient datapoints={priceHistory.datapoints} />
           </div>
 
-          {/* ── Trend / volatility badge ─────────────────────────────── */}
-          {priceHistory.trend_direction && (
-            <p className="mt-1 text-xs text-neutral-500 text-right pr-2">
-              Trend: <span className="font-medium capitalize">{priceHistory.trend_direction}</span>
-              {priceHistory.volatility_flag && (
-                <span className="ml-2 text-amber-600">⚠ High volatility</span>
-              )}
-            </p>
-          )}
-
-          {/* ── Accessible data table (visually hidden, always in DOM) ── */}
+          {/* ── Accessible data table ────────────────────────────────────── */}
           <div className="sr-only">
             <table>
               <caption>
-                Historical closing prices for {company?.ticker ?? 'this ticker'}
+                Historical closing prices for {company?.ticker ?? "this ticker"}
               </caption>
               <thead>
                 <tr>

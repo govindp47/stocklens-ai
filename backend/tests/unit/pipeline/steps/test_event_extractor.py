@@ -9,13 +9,12 @@ from uuid import uuid4
 
 import pytest
 
+from app.domain.models.events import ExtractedEvent
 from app.domain.models.market import CompanyInfo
 from app.domain.models.news import ArticleSummary
 from app.pipeline.context import PipelineContext, PipelineOutputs
 from app.pipeline.steps.base import StepStatus
 from app.pipeline.steps.event_extractor import EventExtractor, _deduplicate_events
-from app.domain.models.events import ExtractedEvent
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +68,7 @@ _VALID_EVENT = {
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         extractor, _ = _make_extractor()
@@ -82,7 +81,7 @@ class TestMetadata:
 # ── can_execute ───────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCanExecute:
     def test_can_execute_false_without_summaries(self) -> None:
         extractor, _ = _make_extractor()
@@ -103,13 +102,11 @@ class TestCanExecute:
 # ── Valid events extracted ────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestValidEventsExtracted:
     async def test_valid_events_extracted(self) -> None:
         ctx = _make_context(summaries=[_make_summary(1)])
-        ctx.llm_provider.complete = AsyncMock(
-            return_value=_events_response([_VALID_EVENT])
-        )
+        ctx.llm_provider.complete = AsyncMock(return_value=_events_response([_VALID_EVENT]))
 
         extractor, _ = _make_extractor()
         result = await extractor.execute(ctx)
@@ -122,9 +119,7 @@ class TestValidEventsExtracted:
 
     async def test_events_count_in_output_summary(self) -> None:
         ctx = _make_context(summaries=[_make_summary(1)])
-        ctx.llm_provider.complete = AsyncMock(
-            return_value=_events_response([_VALID_EVENT])
-        )
+        ctx.llm_provider.complete = AsyncMock(return_value=_events_response([_VALID_EVENT]))
 
         extractor, _ = _make_extractor()
         result = await extractor.execute(ctx)
@@ -155,7 +150,7 @@ class TestValidEventsExtracted:
 # ── Invalid event type discarded ──────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestInvalidEventTypeDiscarded:
     async def test_invalid_event_type_discarded(self) -> None:
         """Events with event_type not in the allowed list are silently discarded."""
@@ -180,7 +175,12 @@ class TestInvalidEventTypeDiscarded:
 
     async def test_all_invalid_types_gives_empty_list(self) -> None:
         events = [
-            {"event_type": "Unknown", "description": "Something happened.", "detected_date": None, "source_article_indices": []},
+            {
+                "event_type": "Unknown",
+                "description": "Something happened.",
+                "detected_date": None,
+                "source_article_indices": [],
+            },
         ]
         ctx = _make_context(summaries=[_make_summary(1)])
         ctx.llm_provider.complete = AsyncMock(return_value=_events_response(events))
@@ -195,7 +195,7 @@ class TestInvalidEventTypeDiscarded:
 # ── Empty events → COMPLETE ───────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEmptyEvents:
     async def test_empty_events_is_complete_not_failed(self) -> None:
         """Empty events array from model produces COMPLETE, not FAILED."""
@@ -210,7 +210,12 @@ class TestEmptyEvents:
 
     async def test_empty_description_events_discarded(self) -> None:
         events = [
-            {"event_type": "Earnings Announcement", "description": "", "detected_date": None, "source_article_indices": []},
+            {
+                "event_type": "Earnings Announcement",
+                "description": "",
+                "detected_date": None,
+                "source_article_indices": [],
+            },
         ]
         ctx = _make_context(summaries=[_make_summary(1)])
         ctx.llm_provider.complete = AsyncMock(return_value=_events_response(events))
@@ -224,7 +229,7 @@ class TestEmptyEvents:
 # ── Deduplication ─────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestDeduplication:
     async def test_identical_descriptions_merged(self) -> None:
         """Duplicate descriptions are merged by combining source_article_indices."""
@@ -301,7 +306,7 @@ class TestDeduplication:
 # ── Article cap ───────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestArticleCap:
     async def test_article_list_capped_at_20(self) -> None:
         """Template receives at most 20 articles regardless of input size."""
@@ -315,7 +320,6 @@ class TestArticleCap:
         # render was called once with articles list
         call_kwargs = mock_loader.render.call_args
         assert call_kwargs is not None
-        articles_arg = call_kwargs.kwargs.get("articles") or call_kwargs.args[1] if len(call_kwargs.args) > 1 else call_kwargs.kwargs["articles"]
         # Access the articles kwarg
         rendered_call = mock_loader.render.call_args
         articles = rendered_call.kwargs["articles"]
@@ -325,7 +329,7 @@ class TestArticleCap:
 # ── Event cap ────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEventCap:
     async def test_events_capped_at_10(self) -> None:
         """Output is capped at 10 events even if model returns more."""
@@ -351,7 +355,7 @@ class TestEventCap:
 # ── Date validation ───────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestDateValidation:
     async def test_invalid_date_stored_as_empty_string(self) -> None:
         events = [
@@ -393,7 +397,7 @@ class TestDateValidation:
 # ── Retry hint appended ───────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestRetryHint:
     async def test_retry_hint_appended_to_prompt(self) -> None:
         """When orchestrator sets a retry hint, it is appended to the prompt."""

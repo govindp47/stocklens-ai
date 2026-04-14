@@ -302,6 +302,40 @@ class ReportRepository:
                 is_retryable=True,
             ) from exc
 
+    async def get_completed_runs(
+        self,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Return completed analysis runs ordered by completion time descending.
+
+        Excludes soft-deleted rows. Returns metadata columns only (no report_data).
+        """
+        sql = """
+            SELECT
+                run_id, ticker, status, created_at, completed_at,
+                duration_ms, llm_provider, llm_model,
+                steps_total, steps_completed, steps_failed
+            FROM  analysis_runs
+            WHERE status     = 'complete'
+              AND is_deleted = FALSE
+            ORDER BY completed_at DESC
+            LIMIT  $1
+            OFFSET $2
+        """
+        try:
+            async with self._pool.acquire() as conn:
+                rows = await conn.fetch(sql, limit, offset)
+            return [dict(row) for row in rows]
+        except asyncpg.PostgresError as exc:
+            raise ExternalProviderError(
+                f"Failed to list completed runs: {exc}",
+                error_code="DB_LIST_RUNS_ERROR",
+                user_message="Failed to retrieve completed runs.",
+                is_retryable=True,
+            ) from exc
+
     async def get_recent_run_for_ip_and_ticker(
         self,
         ip_address: str,

@@ -1,20 +1,17 @@
 /**
  * StatusIndicator — maps panel status to a color + icon pair.
  *
- * Accessibility:
- * - Icons are aria-hidden="true" — the status is conveyed to screen readers
- *   via the parent Panel's accessible name, not this component.
- * - Never relies on color alone; each status has a distinct icon shape.
+ * Icons are aria-hidden — the status is conveyed via the parent Panel's name.
  */
 
 import {
   Loader2,
-  CheckCircle,
+  CheckCircle2,
   AlertTriangle,
   XCircle,
   MinusCircle,
-} from 'lucide-react';
-import type { PanelStatus } from './Panel';
+} from "lucide-react";
+import type { PanelStatus } from "./Panel";
 
 interface StatusIndicatorProps {
   status: PanelStatus;
@@ -22,32 +19,36 @@ interface StatusIndicatorProps {
 
 const STATUS_CONFIG: Record<
   PanelStatus,
-  { Icon: React.FC<React.SVGProps<SVGSVGElement>>; className: string; label: string }
+  {
+    Icon: React.FC<React.SVGProps<SVGSVGElement>>;
+    className: string;
+    label: string;
+  }
 > = {
   loading: {
     Icon: Loader2 as React.FC<React.SVGProps<SVGSVGElement>>,
-    className: 'text-neutral-400 animate-spin',
-    label: 'Loading',
+    className: "text-muted-foreground animate-spin",
+    label: "Loading",
   },
   populated: {
-    Icon: CheckCircle as React.FC<React.SVGProps<SVGSVGElement>>,
-    className: 'text-sentiment-positive',
-    label: 'Data loaded',
+    Icon: CheckCircle2 as React.FC<React.SVGProps<SVGSVGElement>>,
+    className: "text-sentiment-positive",
+    label: "Data loaded",
   },
   partial: {
     Icon: AlertTriangle as React.FC<React.SVGProps<SVGSVGElement>>,
-    className: 'text-amber-500',
-    label: 'Partial data',
+    className: "text-amber-500",
+    label: "Partial data",
   },
   error: {
     Icon: XCircle as React.FC<React.SVGProps<SVGSVGElement>>,
-    className: 'text-sentiment-negative',
-    label: 'Error',
+    className: "text-sentiment-negative",
+    label: "Error",
   },
   unavailable: {
     Icon: MinusCircle as React.FC<React.SVGProps<SVGSVGElement>>,
-    className: 'text-neutral-400',
-    label: 'Unavailable',
+    className: "text-muted-foreground",
+    label: "Unavailable",
   },
 };
 
@@ -55,13 +56,8 @@ export function StatusIndicator({ status }: StatusIndicatorProps) {
   const { Icon, className, label } = STATUS_CONFIG[status];
 
   return (
-    // Wrap in a span with a visually-hidden label so the status is
-    // available to screen readers without being read twice.
     <span title={label}>
-      <Icon
-        className={`w-4 h-4 ${className}`}
-        aria-hidden="true"
-      />
+      <Icon className={`h-3.5 w-3.5 ${className}`} aria-hidden="true" />
     </span>
   );
 }

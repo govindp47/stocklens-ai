@@ -15,7 +15,7 @@ from app.domain.models import (
     RawArticle,
     SentimentResult,
 )
-from app.infrastructure.providers import LLMProvider
+from app.infrastructure.providers.llm_provider import LLMProvider
 
 
 @dataclass

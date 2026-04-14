@@ -9,13 +9,12 @@ import pytest
 
 from app.pipeline.context import PipelineContext, PipelineOutputs
 
-
 # ──────────────────────────────────────────────────────────────────────────────
 # PipelineOutputs
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_outputs_all_none_by_default() -> None:
     outputs = PipelineOutputs()
 
@@ -30,7 +29,7 @@ def test_outputs_all_none_by_default() -> None:
     assert outputs.insights is None
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_outputs_has_predicates_return_false_by_default() -> None:
     outputs = PipelineOutputs()
 
@@ -45,7 +44,7 @@ def test_outputs_has_predicates_return_false_by_default() -> None:
     assert not outputs.has_insights()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_outputs_has_market_data_returns_true_when_set() -> None:
     outputs = PipelineOutputs()
     outputs.market_data = MagicMock()  # any non-None value
@@ -53,7 +52,7 @@ def test_outputs_has_market_data_returns_true_when_set() -> None:
     assert outputs.has_market_data()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_outputs_has_news_returns_false_for_empty_list() -> None:
     """has_news() must return False for both None and empty list."""
     outputs = PipelineOutputs()
@@ -73,7 +72,7 @@ def test_outputs_has_news_returns_false_for_empty_list() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_llm_retry_hint_roundtrip() -> None:
     context = PipelineContext(
         run_id=uuid4(),
@@ -87,7 +86,7 @@ def test_llm_retry_hint_roundtrip() -> None:
     assert context.get_llm_retry_hint("ArticleSummarizer") == "Use valid JSON only."
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_llm_retry_hints_are_step_scoped() -> None:
     """Hints for different steps do not bleed into each other."""
     context = PipelineContext(
@@ -104,7 +103,7 @@ def test_llm_retry_hints_are_step_scoped() -> None:
     assert context.get_llm_retry_hint("StepC") is None
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 def test_llm_retry_hint_overwrite() -> None:
     context = PipelineContext(
         run_id=uuid4(),

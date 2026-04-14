@@ -19,17 +19,20 @@ services:
       context: ../backend
       dockerfile: Dockerfile
       target: development
+    container_name: stocklens-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-stocklens}:${POSTGRES_PASSWORD:-stocklens_password}@db:5432/${POSTGRES_DB:-stocklens_db}
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_URL: http://ollama:11434
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:80,http://localhost}
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
     volumes:
       - ../backend/app:/app/app:ro    # hot-reload via uvicorn --reload
       - ../backend/db:/app/db:ro
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://stocklens:password@db:5432/stocklens
-      - REDIS_URL=redis://redis:6379/0
-      - OLLAMA_URL=http://ollama:11434
-      - DEFAULT_LLM_MODEL=mistral:7b-instruct
-      - ENVIRONMENT=development
-      - LOG_LEVEL=DEBUG
-      - MAX_CONCURRENT_LLM_CALLS=2
     depends_on:
       db:
         condition: service_healthy
@@ -43,55 +46,64 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
       target: development
-    volumes:
-      - ../frontend:/app:ro
-      - /app/node_modules           # prevent host node_modules override
-      - /app/.next                  # prevent host .next override
+    container_name: stocklens-frontend
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NODE_ENV=development
+      NODE_ENV: development
+      API_URL: http://api:8000
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+      - frontend_node_modules:/app/node_modules    # persistent node_modules
+      - frontend_next:/app/.next                   # persistent build cache
+    depends_on:
+      - api
     networks:
       - stocklens_internal
 
   db:
     image: postgres:15-alpine
+    container_name: stocklens-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stocklens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stocklens_password}
+      POSTGRES_DB: ${POSTGRES_DB:-stocklens_db}
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_DB=stocklens
-      - POSTGRES_USER=stocklens
-      - POSTGRES_PASSWORD=password
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stocklens"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - stocklens_internal
 
   redis:
     image: redis:7-alpine
+    container_name: stocklens-cache
     ports:
       - "6379:6379"
     command: redis-server --save "" --appendonly no   # no persistence in dev
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - stocklens_internal
 
   ollama:
     image: ollama/ollama:latest
+    container_name: stocklens-llm
     ports:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
     environment:
-      - OLLAMA_NUM_PARALLEL=2
+      - OLLAMA_NUM_PARALLEL=5
       - OLLAMA_MAX_LOADED_MODELS=1
       - OLLAMA_KEEP_ALIVE=10m
     networks:
@@ -149,6 +161,8 @@ volumes:
   prometheus_data:
   grafana_data:
   loki_data:
+  frontend_node_modules:
+  frontend_next:
 
 networks:
   stocklens_internal:

@@ -11,9 +11,9 @@
  *   string buffer and merged with the next chunk before splitting.
  */
 
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from "react";
 
 export interface SSEHandlers {
   /** Called with the raw data payload (string after "data: ") for each frame. */
@@ -41,7 +41,7 @@ export function useSSEStream() {
       try {
         const response = await fetch(url, {
           signal: controller.signal,
-          headers: { Accept: 'text/event-stream' },
+          headers: { Accept: "text/event-stream" },
         });
 
         if (!response.ok || !response.body) {
@@ -54,7 +54,7 @@ export function useSSEStream() {
           .getReader();
         readerRef.current = reader;
 
-        let buffer = '';
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -64,14 +64,16 @@ export function useSSEStream() {
 
           // SSE frames are delimited by \n\n.
           // The last element after split may be a partial frame — keep it in buffer.
-          const frames = buffer.split('\n\n');
-          buffer = frames.pop() ?? '';
+          const frames = buffer.split("\n\n");
+          buffer = frames.pop() ?? "";
 
           for (const frame of frames) {
             if (!frame.trim()) continue;
 
             // Find the data line within the frame.
-            const dataLine = frame.split('\n').find((l) => l.startsWith('data: '));
+            const dataLine = frame
+              .split("\n")
+              .find((l) => l.startsWith("data: "));
             if (dataLine) {
               handlers.onEvent(dataLine.slice(6)); // strip "data: "
             }
@@ -79,7 +81,7 @@ export function useSSEStream() {
         }
       } catch (error) {
         // AbortError is expected on closeSSE() / unmount — not a real error.
-        if ((error as Error).name !== 'AbortError') {
+        if ((error as Error).name !== "AbortError") {
           handlers.onError?.();
         }
       }

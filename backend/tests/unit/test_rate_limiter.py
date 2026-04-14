@@ -6,7 +6,6 @@ All tests use fakeredis — no real Redis required.
 from __future__ import annotations
 
 import asyncio
-import time
 
 import fakeredis
 import fakeredis.aioredis as aioredis_fakeredis
@@ -18,11 +17,10 @@ from app.infrastructure.rate_limiter import (
     endpoint_slug,
 )
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 
-@pytest.fixture
+@pytest.fixture()
 def redis() -> aioredis_fakeredis.FakeRedis:  # type: ignore[type-arg]
     """Fresh isolated fakeredis instance for each test (separate FakeServer)."""
     server = fakeredis.FakeServer()
@@ -39,7 +37,7 @@ def _limiter(
 # ── endpoint_slug helper ──────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestEndpointSlug:
     def test_post_analyze(self) -> None:
         assert endpoint_slug("POST /api/v1/analyze") == "post_analyze"
@@ -61,7 +59,7 @@ class TestEndpointSlug:
 # ── IP hashing ────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestIpHashing:
     def test_hash_is_16_chars(self) -> None:
         assert len(_hash_ip("192.168.1.1")) == 16
@@ -80,7 +78,7 @@ class TestIpHashing:
 # ── Core rate limit behaviour ─────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestRateLimitBehaviour:
     async def test_allows_within_limit(self, redis: aioredis_fakeredis.FakeRedis) -> None:  # type: ignore[type-arg]
         """Requests up to the limit are all allowed."""
@@ -127,7 +125,9 @@ class TestRateLimitBehaviour:
             counts.append(count)
         assert counts == [1, 2, 3, 4, 5]
 
-    async def test_window_expiry_allows_new_requests(self, redis: aioredis_fakeredis.FakeRedis) -> None:  # type: ignore[type-arg]
+    async def test_window_expiry_allows_new_requests(
+        self, redis: aioredis_fakeredis.FakeRedis
+    ) -> None:  # type: ignore[type-arg]
         """After the window expires, a new request is permitted from count=1."""
         # Use a 1-second window for a fast test
         limiter = _limiter(redis, window_seconds=1)
@@ -148,7 +148,9 @@ class TestRateLimitBehaviour:
         assert allowed_after is True
         assert count_after == 1
 
-    async def test_independent_limits_per_endpoint(self, redis: aioredis_fakeredis.FakeRedis) -> None:  # type: ignore[type-arg]
+    async def test_independent_limits_per_endpoint(
+        self, redis: aioredis_fakeredis.FakeRedis
+    ) -> None:  # type: ignore[type-arg]
         """Different endpoints on the same IP have independent counters."""
         limiter = _limiter(redis)
 
@@ -167,7 +169,7 @@ class TestRateLimitBehaviour:
 # ── Key structure ─────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestKeyStructure:
     async def test_raw_ip_not_in_key(self, redis: aioredis_fakeredis.FakeRedis) -> None:  # type: ignore[type-arg]
         """Redis keys must not contain the raw IP address."""

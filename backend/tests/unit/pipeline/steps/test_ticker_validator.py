@@ -13,8 +13,8 @@ from app.pipeline.context import PipelineContext, PipelineOutputs
 from app.pipeline.steps.base import StepStatus
 from app.pipeline.steps.ticker_validator import TickerValidator
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 def _make_validator(
     cache_resolve: bool | None = None,
@@ -53,7 +53,8 @@ def _make_context(ticker: str = "AAPL") -> PipelineContext:
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
-@pytest.mark.unit
+
+@pytest.mark.unit()
 class TestTickerValidatorMetadata:
     def test_step_metadata(self) -> None:
         validator, _, _ = _make_validator()
@@ -68,7 +69,7 @@ class TestTickerValidatorMetadata:
         assert validator.can_execute(ctx) is True
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestNegativeCache:
     async def test_negative_cache_skips_external_call(self) -> None:
         """A cached False result must raise immediately without any provider call."""
@@ -92,7 +93,7 @@ class TestNegativeCache:
         mock_repo.set_resolved.assert_not_called()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCacheMissFlow:
     async def test_unresolvable_ticker_raises_error(self) -> None:
         """Cache miss + provider returns False → raise TickerNotResolvableError."""
@@ -107,9 +108,7 @@ class TestCacheMissFlow:
         mock_provider.is_ticker_resolvable.assert_called_once_with("FAKE")
 
     async def test_unresolvable_ticker_writes_negative_cache(self) -> None:
-        validator, mock_repo, _ = _make_validator(
-            cache_resolve=None, is_resolvable=False
-        )
+        validator, mock_repo, _ = _make_validator(cache_resolve=None, is_resolvable=False)
         ctx = _make_context(ticker="FAKE")
 
         with pytest.raises(TickerNotResolvableError):
@@ -119,9 +118,7 @@ class TestCacheMissFlow:
 
     async def test_resolvable_ticker_populates_company_info(self) -> None:
         """Cache miss + provider returns True → context.outputs.company_info set."""
-        expected_info = CompanyInfo(
-            ticker="AAPL", name="Apple Inc.", exchange="NASDAQ"
-        )
+        expected_info = CompanyInfo(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ")
         validator, _, _ = _make_validator(
             cache_resolve=None,
             is_resolvable=True,
@@ -150,7 +147,7 @@ class TestCacheMissFlow:
         )
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestPositiveCacheFlow:
     async def test_positive_cache_skips_is_resolvable_call(self) -> None:
         """Cached True result skips is_ticker_resolvable — only get_company_info called."""
@@ -163,7 +160,7 @@ class TestPositiveCacheFlow:
         mock_provider.is_ticker_resolvable.assert_not_called()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestErrorPropagation:
     async def test_external_provider_error_propagates(self) -> None:
         """ExternalProviderError from is_ticker_resolvable propagates for retry."""
@@ -194,14 +191,12 @@ class TestErrorPropagation:
         assert exc_info.type is TickerNotResolvableError
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestOutputIntegrity:
     async def test_market_data_populated_when_quote_available(self) -> None:
         """If get_quote returns data, market_data is also set on context.outputs."""
         quote = MarketData(available=True, price=175.0)
-        validator, _, _ = _make_validator(
-            cache_resolve=None, is_resolvable=True, quote=quote
-        )
+        validator, _, _ = _make_validator(cache_resolve=None, is_resolvable=True, quote=quote)
         ctx = _make_context()
 
         await validator.execute(ctx)
@@ -211,9 +206,7 @@ class TestOutputIntegrity:
 
     async def test_market_data_not_set_when_quote_none(self) -> None:
         """If get_quote returns None, market_data is not set."""
-        validator, _, _ = _make_validator(
-            cache_resolve=None, is_resolvable=True, quote=None
-        )
+        validator, _, _ = _make_validator(cache_resolve=None, is_resolvable=True, quote=None)
         ctx = _make_context()
 
         await validator.execute(ctx)

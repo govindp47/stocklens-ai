@@ -24,7 +24,6 @@ from app.pipeline.steps.insight_generator import (
     _apply_fallback,
 )
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 
@@ -118,7 +117,7 @@ def _make_generator() -> tuple[InsightGenerator, MagicMock]:
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         gen, _ = _make_generator()
@@ -142,7 +141,7 @@ class TestMetadata:
 # ── Successful generation ─────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSuccessfulGeneration:
     async def test_insights_generated_with_all_data(self) -> None:
         ctx = _make_context()
@@ -194,7 +193,7 @@ class TestSuccessfulGeneration:
 # ── Fallback for empty sections ───────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestFallback:
     async def test_empty_sections_replaced_with_fallback_string(self) -> None:
         """Empty string sections are replaced with the canonical fallback."""
@@ -247,7 +246,7 @@ class TestFallback:
 # ── Disclaimer hardcoded ──────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestDisclaimer:
     def test_disclaimer_is_hardcoded_not_llm_generated(self) -> None:
         """InsightsResult.disclaimer equals AI_ANALYSIS_DISCLAIMER constant."""
@@ -268,7 +267,7 @@ class TestDisclaimer:
 # ── Token budget truncation ───────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestTokenBudget:
     async def test_token_budget_truncates_articles(self) -> None:
         """Articles are removed when prompt exceeds MAX_PROMPT_TOKENS."""
@@ -279,7 +278,6 @@ class TestTokenBudget:
         def mock_render(template: str, **kwargs: object) -> str:
             nonlocal render_call_count
             render_call_count += 1
-            articles = kwargs.get("articles", [])
             # Return a long prompt only on the first call (before truncation)
             if render_call_count == 1:
                 return "x" * 13000  # > 3000 tokens (each token ~4 chars)
@@ -330,7 +328,7 @@ class TestTokenBudget:
 # ── Retry hint ────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestRetryHint:
     async def test_retry_hint_appended_to_prompt(self) -> None:
         ctx = _make_context()

@@ -1,0 +1,251 @@
+version: '3.9'
+# infra/docker-compose.prod.yml
+# Production overrides — applied on top of (or standalone from) docker-compose.yml.
+# References GHCR images built and pushed by the CI build-images job.
+# Run with: docker compose -f infra/docker-compose.prod.yml up -d
+
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx-prod.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt/live/stocklens.example.com:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  api:
+    image: ghcr.io/${REPO_OWNER}/stocklens-api:latest
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - OLLAMA_URL=http://ollama:11434
+      - DEFAULT_LLM_MODEL=${DEFAULT_LLM_MODEL:-mistral:7b-instruct}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - MAX_CONCURRENT_LLM_CALLS=3
+      - PIPELINE_TIMEOUT_SECONDS=420
+      - MAX_ARTICLES_PER_RUN=20
+      - RATE_LIMIT_REQUESTS=10
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  frontend:
+    image: ghcr.io/${REPO_OWNER}/stocklens-frontend:latest
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://stocklens.example.com
+      - NODE_ENV=production
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=stocklens
+      - POSTGRES_USER=stocklens
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    command: >
+      postgres
+        -c max_connections=20
+        -c shared_buffers=128MB
+        -c effective_cache_size=256MB
+        -c maintenance_work_mem=32MB
+        -c wal_buffers=4MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stocklens"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+        --save 3600 1
+        --appendonly yes
+        --maxmemory 128mb
+        --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis_data:/data
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_NUM_PARALLEL=2
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=10m
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 6G
+
+  backup:
+    image: ghcr.io/${REPO_OWNER}/stocklens-backup:latest
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY}
+      - BACKUP_KEY_ID=${BACKUP_KEY_ID:-backup-key-default}
+      - BACKUP_S3_BUCKET=${BACKUP_S3_BUCKET:-}
+      - ENVIRONMENT=production
+      - PROMETHEUS_TEXTFILE_DIR=/var/lib/node_exporter/textfile_collector
+    volumes:
+      - backup_data:/backups
+      - ./scripts:/scripts:ro
+      - prometheus_textfiles:/var/lib/node_exporter/textfile_collector
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:10.3.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://stocklens.example.com/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/alerts.yml:/etc/grafana/provisioning/alerting/alerts.yml:ro
+    depends_on:
+      - prometheus
+    networks:
+      - stocklens_internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  loki:
+    image: grafana/loki:2.9.0
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - stocklens_internal
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    restart: unless-stopped
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./monitoring/loki/promtail-config.yml:/etc/promtail/config.yml:ro
+    depends_on:
+      - loki
+    networks:
+      - stocklens_internal
+
+volumes:
+  pg_data:
+  redis_data:
+  ollama_models:
+  backup_data:
+  prometheus_data:
+  prometheus_textfiles:
+  grafana_data:
+  loki_data:
+
+networks:
+  stocklens_internal:
+    driver: bridge

@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -18,7 +18,6 @@ from app.infrastructure.repositories.report_repository import ReportRepository
 from app.pipeline.context import PipelineContext
 from app.pipeline.orchestrator import PipelineOrchestrator, pipeline_watchdog
 from app.pipeline.steps.base import StepResult, StepStatus
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Test helpers
@@ -103,7 +102,7 @@ def _published_types(event_bus: AsyncMock) -> list[str]:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_complete_pipeline_happy_path() -> None:
     repo, bus = _mock_repo(), _mock_bus()
     run_id = uuid4()
@@ -122,7 +121,7 @@ async def test_complete_pipeline_happy_path() -> None:
     assert "pipeline_complete" in types
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_steps_executed_in_step_index_order() -> None:
     """Orchestrator must sort steps by step_index regardless of registration order."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -144,7 +143,7 @@ async def test_steps_executed_in_step_index_order() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_critical_step_failure_halts_pipeline() -> None:
     repo, bus = _mock_repo(), _mock_bus()
     step1 = MockStep("ticker_validator", 1, critical=True, outcomes=[StepStatus.FAILED])
@@ -168,7 +167,7 @@ async def test_critical_step_failure_halts_pipeline() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_non_critical_failure_continues() -> None:
     repo, bus = _mock_repo(), _mock_bus()
     step1 = MockStep("market_data", 1, critical=False, outcomes=[StepStatus.FAILED])
@@ -188,7 +187,7 @@ async def test_non_critical_failure_continues() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_step_skipped_when_can_execute_false() -> None:
     repo, bus = _mock_repo(), _mock_bus()
     step1 = MockStep("a", 1)
@@ -203,9 +202,9 @@ async def test_step_skipped_when_can_execute_false() -> None:
     assert step3.execute_count == 1
     repo.mark_complete.assert_awaited_once()
 
-    types = _published_types(bus)
     skipped_events = [
-        c.args[1] for c in bus.publish.call_args_list
+        c.args[1]
+        for c in bus.publish.call_args_list
         if c.args[1].get("status") == StepStatus.SKIPPED.value
     ]
     assert len(skipped_events) == 1
@@ -217,7 +216,7 @@ async def test_step_skipped_when_can_execute_false() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_retry_fires_on_retryable_error() -> None:
     repo, bus = _mock_repo(), _mock_bus()
     retryable = ExternalProviderError(
@@ -235,7 +234,7 @@ async def test_retry_fires_on_retryable_error() -> None:
     repo.mark_complete.assert_awaited_once()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_no_retry_on_non_retryable_error() -> None:
     repo, bus = _mock_repo(), _mock_bus()
     non_retryable = ExternalProviderError(
@@ -245,7 +244,8 @@ async def test_no_retry_on_non_retryable_error() -> None:
         is_retryable=False,
     )
     step = MockStep(
-        "ticker_validator", 1,
+        "ticker_validator",
+        1,
         critical=True,
         max_retries=1,
         outcomes=[non_retryable, StepStatus.COMPLETE],
@@ -259,7 +259,7 @@ async def test_no_retry_on_non_retryable_error() -> None:
     repo.mark_failed.assert_awaited_once()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_retry_exhaustion_marks_step_failed() -> None:
     """If all retry attempts fail, the final StepResult must be FAILED."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -270,7 +270,8 @@ async def test_retry_exhaustion_marks_step_failed() -> None:
         is_retryable=True,
     )
     step = MockStep(
-        "market_data", 1,
+        "market_data",
+        1,
         critical=False,
         max_retries=1,
         outcomes=[retryable, retryable],  # both attempts fail
@@ -284,7 +285,8 @@ async def test_retry_exhaustion_marks_step_failed() -> None:
     repo.mark_complete.assert_awaited_once()
 
     failed_events = [
-        c.args[1] for c in bus.publish.call_args_list
+        c.args[1]
+        for c in bus.publish.call_args_list
         if c.args[1].get("status") == StepStatus.FAILED.value
     ]
     assert len(failed_events) == 1
@@ -295,7 +297,7 @@ async def test_retry_exhaustion_marks_step_failed() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_llm_parse_error_stores_hint_and_retries() -> None:
     """LLMParseError must store a corrective hint on the context and retry."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -307,7 +309,9 @@ async def test_llm_parse_error_stores_hint_and_retries() -> None:
             return await super().execute(context)
 
     parse_err = LLMParseError("bad json", step_name="llm_step", raw_output="{bad}")
-    step = HintCapturingStep("llm_step", 1, max_retries=1, outcomes=[parse_err, StepStatus.COMPLETE])
+    step = HintCapturingStep(
+        "llm_step", 1, max_retries=1, outcomes=[parse_err, StepStatus.COMPLETE]
+    )
 
     with patch("asyncio.sleep", new_callable=AsyncMock):
         await _make_orchestrator([step], repo, bus).run(uuid4(), "AAPL", MagicMock())
@@ -323,7 +327,7 @@ async def test_llm_parse_error_stores_hint_and_retries() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_exponential_backoff_sequence() -> None:
     """Backoff delays must follow [1, 2, 4, 8, 8, …] seconds capped at 8."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -332,7 +336,8 @@ async def test_exponential_backoff_sequence() -> None:
     )
     # 3 retries so we get delays after attempts 1, 2, 3
     step = MockStep(
-        "step", 1,
+        "step",
+        1,
         critical=False,
         max_retries=3,
         outcomes=[retryable, retryable, retryable, StepStatus.COMPLETE],
@@ -351,7 +356,7 @@ async def test_exponential_backoff_sequence() -> None:
     assert step.execute_count == 4
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_exponential_backoff_capped_at_8s() -> None:
     """Backoff must not exceed 8 seconds regardless of retry count."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -360,7 +365,8 @@ async def test_exponential_backoff_capped_at_8s() -> None:
     )
     # 5 retries → delays after attempts 1-5; cap kicks in at attempt 4+
     step = MockStep(
-        "step", 1,
+        "step",
+        1,
         critical=False,
         max_retries=5,
         outcomes=[retryable] * 5 + [StepStatus.COMPLETE],
@@ -383,7 +389,7 @@ async def test_exponential_backoff_capped_at_8s() -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_watchdog_cancels_slow_pipeline() -> None:
     """Watchdog must cancel a pipeline that exceeds the timeout and call mark_timed_out."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -412,7 +418,7 @@ async def test_watchdog_cancels_slow_pipeline() -> None:
     assert "pipeline_timeout" in types
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_watchdog_does_not_cancel_fast_pipeline() -> None:
     """Watchdog must NOT call mark_timed_out if the pipeline completes before timeout."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -434,7 +440,7 @@ async def test_watchdog_does_not_cancel_fast_pipeline() -> None:
     repo.mark_timed_out.assert_not_awaited()
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_watchdog_swallows_cancelled_error() -> None:
     """pipeline_watchdog must not propagate CancelledError to its caller."""
     repo, bus = _mock_repo(), _mock_bus()
@@ -455,7 +461,7 @@ async def test_watchdog_swallows_cancelled_error() -> None:
     # No exception raised → test passes
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 async def test_launch_creates_pipeline_and_watchdog_tasks() -> None:
     """launch() must return run_id and schedule both pipeline and watchdog tasks."""
     repo, bus = _mock_repo(), _mock_bus()

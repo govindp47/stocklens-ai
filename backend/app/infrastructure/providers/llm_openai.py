@@ -20,8 +20,8 @@ from app.domain.exceptions import ExternalProviderError
 
 log = structlog.get_logger(__name__)
 
-_CONNECT_TIMEOUT = 5.0   # seconds
-_READ_TIMEOUT = 30.0     # seconds
+_CONNECT_TIMEOUT = 5.0  # seconds
+_READ_TIMEOUT = 30.0  # seconds
 _OPENAI_BASE_URL = "https://api.openai.com"
 
 

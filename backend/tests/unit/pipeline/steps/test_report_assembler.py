@@ -13,12 +13,10 @@ from app.domain.models.events import ExtractedEvent
 from app.domain.models.insights import InsightSections
 from app.domain.models.market import CompanyInfo, MarketData, PriceHistory
 from app.domain.models.news import ArticleSummary, RawArticle
-from app.domain.models.report import AnalysisReport
 from app.domain.models.sentiment import SentimentDistribution, SentimentResult
 from app.pipeline.context import PipelineContext, PipelineOutputs
 from app.pipeline.steps.base import StepStatus
 from app.pipeline.steps.report_assembler import ReportAssembler, _compute_completeness
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -53,9 +51,7 @@ def _make_context_full() -> PipelineContext:
     """Context with all sections populated."""
     outputs = PipelineOutputs()
     outputs.company_info = CompanyInfo(ticker="AAPL", name="Apple Inc.")
-    outputs.market_data = MarketData(
-        available=True, price=185.5, change_pct=1.2, change_abs=2.2
-    )
+    outputs.market_data = MarketData(available=True, price=185.5, change_pct=1.2, change_abs=2.2)
     outputs.price_history = PriceHistory(available=True)
     outputs.raw_articles = [_make_raw_article(i) for i in range(1, 4)]
     outputs.deduplicated_articles = outputs.raw_articles.copy()
@@ -100,9 +96,7 @@ def _make_context_minimal() -> PipelineContext:
     # No company_info intentionally for "minimal" without company
     mock_llm = MagicMock()
     mock_llm.model_name = "mistral:7b-instruct"
-    return PipelineContext(
-        run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs
-    )
+    return PipelineContext(run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs)
 
 
 def _make_assembler() -> ReportAssembler:
@@ -112,7 +106,7 @@ def _make_assembler() -> ReportAssembler:
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         asm = _make_assembler()
@@ -130,7 +124,7 @@ class TestMetadata:
 # ── Completeness ──────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCompleteness:
     async def test_completeness_complete_with_all_sections(self) -> None:
         ctx = _make_context_full()
@@ -151,9 +145,7 @@ class TestCompleteness:
         # No news, sentiment, insights
         mock_llm = MagicMock()
         mock_llm.model_name = "ollama"
-        ctx = PipelineContext(
-            run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs
-        )
+        ctx = PipelineContext(run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs)
 
         asm = _make_assembler()
         await asm.execute(ctx)
@@ -181,7 +173,7 @@ class TestCompleteness:
 # ── Content hash ──────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestContentHash:
     async def test_content_hash_is_deterministic(self) -> None:
         """Calling execute() twice with identical context → same content_hash."""
@@ -214,7 +206,7 @@ class TestContentHash:
 # ── final_report_json validity ────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestReportJsonValidity:
     async def test_final_report_json_is_parseable(self) -> None:
         """context.outputs.final_report_json is a valid JSON string."""
@@ -246,7 +238,7 @@ class TestReportJsonValidity:
 # ── Partial data notices ──────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestPartialNotices:
     async def test_partial_notices_collected_from_failed_sections(self) -> None:
         """Unavailable sections produce partial_data_notices."""
@@ -257,9 +249,7 @@ class TestPartialNotices:
 
         mock_llm = MagicMock()
         mock_llm.model_name = "ollama"
-        ctx = PipelineContext(
-            run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs
-        )
+        ctx = PipelineContext(run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs)
 
         asm = _make_assembler()
         await asm.execute(ctx)
@@ -282,16 +272,14 @@ class TestPartialNotices:
 # ── Section assembly ──────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestSectionAssembly:
     async def test_none_market_data_assembles_as_unavailable(self) -> None:
         outputs = PipelineOutputs()
         outputs.company_info = CompanyInfo(ticker="AAPL")
         mock_llm = MagicMock()
         mock_llm.model_name = "ollama"
-        ctx = PipelineContext(
-            run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs
-        )
+        ctx = PipelineContext(run_id=uuid4(), ticker="AAPL", llm_provider=mock_llm, outputs=outputs)
 
         asm = _make_assembler()
         await asm.execute(ctx)

@@ -10,7 +10,7 @@ interface CodeBlockProps {
   language?: string;
 }
 
-export function CodeBlock({ code, language = 'bash' }: CodeBlockProps) {
+export function CodeBlock({ code, language = "bash" }: CodeBlockProps) {
   return (
     <div className="rounded-md bg-neutral-900 overflow-x-auto">
       {language && (

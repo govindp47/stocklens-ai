@@ -1,107 +1,123 @@
-'use client';
+"use client";
 
 /**
  * InsightPanel — AI-generated research overview divided into six named sections.
- *
- * Accessibility:
- * - Sections with insufficient data are rendered with muted/italic styling.
- * - Disclaimer is always visible at the bottom with role="note".
  */
 
-import { useAnalysisStore } from '@/store';
-import { Panel } from '@/components/ui/Panel';
-import { PanelSkeleton } from '@/components/ui/PanelSkeleton';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { DISCLAIMER_TEXT } from '@/lib/constants';
-import type { InsightSections } from '@/types/report';
+import {
+  Sparkles,
+  Building2,
+  Newspaper,
+  BarChart2,
+  TrendingUp,
+  ShieldAlert,
+  BrainCircuit,
+} from "lucide-react";
+import { useAnalysisStore } from "@/store";
+import { Panel } from "@/components/ui/Panel";
+import { PanelSkeleton } from "@/components/ui/PanelSkeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { DISCLAIMER_TEXT } from "@/lib/constants";
+import type { InsightSections } from "@/types/report";
 
-// ─── Fallback string that signals insufficient data ────────────────────────────
+const INSUFFICIENT_DATA_SENTINEL =
+  "Insufficient data available for this section";
 
-const INSUFFICIENT_DATA_SENTINEL = 'Insufficient data available for this section';
-
-// ─── Section config ───────────────────────────────────────────────────────────
-
-const SECTION_ORDER: Array<{ key: keyof InsightSections; label: string }> = [
-  { key: 'company_overview',    label: 'Company Overview'    },
-  { key: 'recent_developments', label: 'Recent Developments' },
-  { key: 'sentiment_overview',  label: 'Sentiment Overview'  },
-  { key: 'potential_drivers',   label: 'Potential Drivers'   },
-  { key: 'potential_risks',     label: 'Potential Risks'     },
-  { key: 'ai_summary',          label: 'AI Summary'          },
+const SECTION_ORDER: Array<{
+  key: keyof InsightSections;
+  label: string;
+  icon: React.ElementType;
+}> = [
+  { key: "company_overview", label: "Company Overview", icon: Building2 },
+  { key: "recent_developments", label: "Recent Developments", icon: Newspaper },
+  { key: "sentiment_overview", label: "Sentiment Overview", icon: BarChart2 },
+  { key: "potential_drivers", label: "Potential Drivers", icon: TrendingUp },
+  { key: "potential_risks", label: "Potential Risks", icon: ShieldAlert },
+  { key: "ai_summary", label: "AI Summary", icon: BrainCircuit },
 ];
-
-// ─── Single section ───────────────────────────────────────────────────────────
 
 function InsightSection({
   label,
   content,
+  icon: Icon,
 }: {
   label: string;
   content: string;
+  icon: React.ElementType;
 }) {
   const isInsufficient = content.includes(INSUFFICIENT_DATA_SENTINEL);
 
   return (
-    <div className="border-b border-neutral-100 last:border-0 px-4 py-3">
-      <h3 className="text-xs font-semibold text-neutral-700 mb-1">{label}</h3>
+    <div className="border-b border-border/40 last:border-0 px-5 py-4">
+      <h3 className="flex items-center gap-2 text-xs font-semibold text-foreground mb-2.5 uppercase tracking-wide">
+        <Icon
+          className="h-3.5 w-3.5 text-brand-500 shrink-0"
+          aria-hidden="true"
+        />
+        {label}
+      </h3>
       <p
-        className={
+        className={`text-sm leading-relaxed ${
           isInsufficient
-            ? 'text-xs text-neutral-400 italic'
-            : 'text-xs text-neutral-700 leading-relaxed'
-        }
+            ? "text-muted-foreground/60 italic"
+            : "text-muted-foreground"
+        }`}
       >
-        {content}
+        {isInsufficient
+          ? "Not enough data available for this section."
+          : content}
       </p>
     </div>
   );
 }
 
-// ─── Disclaimer banner ────────────────────────────────────────────────────────
-
-function InsightDisclaimer({ text }: { text: string }) {
-  return (
-    <div
-      role="note"
-      className="mx-4 mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
-      data-testid="insight-disclaimer"
-    >
-      {text}
-    </div>
-  );
-}
-
-// ─── Panel ────────────────────────────────────────────────────────────────────
-
 export function InsightPanel() {
   const { insights, status } = useAnalysisStore();
 
   const panelStatus = (() => {
-    if (!insights) return 'loading';
-    if (!insights.available) return 'unavailable';
-    return 'populated';
+    if (!insights) return "loading";
+    if (!insights.available) return "unavailable";
+    return "populated";
   })();
 
-  const isLoading = status === 'loading' || status === 'streaming';
+  const isLoading =
+    !insights && (status === "loading" || status === "streaming");
+
+  const aiBadge = (
+    <span className="inline-flex items-center gap-1 rounded-full border border-brand-200/60 bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-brand-600 dark:bg-brand-50/10 dark:border-brand-700/40 dark:text-brand-400">
+      <Sparkles className="h-2.5 w-2.5" aria-hidden="true" />
+      AI
+    </span>
+  );
 
   return (
-    <Panel id="insights" title="AI Research Overview" status={panelStatus}>
-      {!insights && isLoading ? (
-        <PanelSkeleton rows={6} />
+    <Panel
+      id="insights"
+      title="AI Research Overview"
+      status={panelStatus}
+      badge={aiBadge}
+    >
+      {isLoading ? (
+        <PanelSkeleton rows={8} />
       ) : !insights || !insights.available || !insights.sections ? (
         <ErrorState message="AI insights could not be generated. Other data is still available." />
       ) : (
         <div>
-          {SECTION_ORDER.map(({ key, label }) => (
+          {SECTION_ORDER.map(({ key, label, icon }) => (
             <InsightSection
               key={key}
               label={label}
-              content={insights.sections![key]}
+              icon={icon}
+              content={insights.sections![key] || INSUFFICIENT_DATA_SENTINEL}
             />
           ))}
-
-          {/* Disclaimer — always rendered at the bottom */}
-          <InsightDisclaimer text={insights.disclaimer || DISCLAIMER_TEXT} />
+          <div
+            role="note"
+            className="mx-5 mb-5 mt-2 rounded-xl border border-border/50 bg-accent/60 px-4 py-3 text-[11px] text-muted-foreground leading-relaxed"
+            data-testid="insight-disclaimer"
+          >
+            {insights.disclaimer || DISCLAIMER_TEXT}
+          </div>
         </div>
       )}
     </Panel>

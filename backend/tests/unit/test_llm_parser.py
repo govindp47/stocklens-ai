@@ -13,7 +13,6 @@ from app.infrastructure.providers.llm_parser import (
     truncate_articles_to_token_budget,
 )
 
-
 # ── extract_json ───────────────────────────────────────────────────────────────
 
 
@@ -41,9 +40,9 @@ def test_strips_plain_markdown_fences() -> None:
 def test_extracts_from_surrounding_text() -> None:
     """Strategy 3: extracts JSON block from surrounding explanatory text."""
     raw = (
-        'Here is the JSON you requested:\n'
+        "Here is the JSON you requested:\n"
         '{"sentiment": "neutral", "score": 0.5}\n'
-        'I hope this helps!'
+        "I hope this helps!"
     )
     result = extract_json(raw)
     assert result == {"sentiment": "neutral", "score": 0.5}
@@ -93,7 +92,7 @@ def test_estimate_tokens_four_chars_per_token() -> None:
     """estimate_tokens uses integer division by 4."""
     assert estimate_tokens("abcd") == 1
     assert estimate_tokens("abcdefgh") == 2
-    assert estimate_tokens("abc") == 0       # 3 // 4 == 0
+    assert estimate_tokens("abc") == 0  # 3 // 4 == 0
     assert estimate_tokens("a" * 4000) == 1000
 
 

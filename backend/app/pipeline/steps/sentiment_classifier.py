@@ -115,9 +115,10 @@ def _compute_distribution(sentiments: list[str]) -> dict[str, int]:
     for i in range(remainder):
         floors[fractional_parts[i % len(fractional_parts)]] += 1
 
-    assert sum(floors.values()) == 100, (
-        f"Distribution must sum to 100, got {sum(floors.values())}: {floors}"
-    )
+    total = sum(floors.values())
+    if total != 100:
+        msg = f"Distribution must sum to 100, got {total}: {floors}"
+        raise ValueError(msg)
     return floors
 
 
@@ -193,9 +194,7 @@ class SentimentClassifier(BasePipelineStep):
 
         company_info = context.outputs.company_info
         company_name: str = (
-            (company_info.name or context.ticker)
-            if company_info is not None
-            else context.ticker
+            (company_info.name or context.ticker) if company_info is not None else context.ticker
         )
 
         logger.info(
@@ -215,19 +214,16 @@ class SentimentClassifier(BasePipelineStep):
             )
 
         coroutines = [
-            self._classify_article(article, context, company_name)
-            for article in summaries
+            self._classify_article(article, context, company_name) for article in summaries
         ]
 
-        raw_results: list[Any] = list(
-            await asyncio.gather(*coroutines, return_exceptions=True)
-        )
+        raw_results: list[Any] = list(await asyncio.gather(*coroutines, return_exceptions=True))
 
         # Collect sentiment labels; exceptions → default to "neutral"
         classified_sentiments: list[str] = []
         updated_summaries: list[ArticleSummary] = []
 
-        for article, result in zip(summaries, raw_results):
+        for article, result in zip(summaries, raw_results, strict=False):
             if isinstance(result, BaseException):
                 logger.warning(
                     "Sentiment classification raised exception",

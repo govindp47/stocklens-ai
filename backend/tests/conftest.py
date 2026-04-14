@@ -17,7 +17,6 @@ import asyncpg
 import fakeredis.aioredis as fakeredis
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # DSN helper — sync, session-scoped; no asyncio involved
 # ---------------------------------------------------------------------------
@@ -40,7 +39,7 @@ def db_dsn() -> str:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
+@pytest.fixture()
 async def db_pool(db_dsn: str) -> asyncpg.Pool:  # type: ignore[return, type-arg]
     """asyncpg connection pool for integration tests.
 
@@ -57,7 +56,7 @@ async def db_pool(db_dsn: str) -> asyncpg.Pool:  # type: ignore[return, type-arg
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture
+@pytest.fixture()
 async def redis() -> fakeredis.FakeRedis:  # type: ignore[type-arg]
     """In-process fake Redis; safe for tests with no external dependency."""
     client: fakeredis.FakeRedis = fakeredis.FakeRedis(decode_responses=False)  # type: ignore[type-arg]
@@ -72,7 +71,7 @@ async def redis() -> fakeredis.FakeRedis:  # type: ignore[type-arg]
 
 
 @pytest.fixture(autouse=True)
-async def clean_db(db_dsn: str, request: pytest.FixtureRequest) -> None:
+async def _clean_db(db_dsn: str, request: pytest.FixtureRequest) -> None:
     """Truncate all application tables before each integration test.
 
     Creates its own short-lived connection so it does not compete with the

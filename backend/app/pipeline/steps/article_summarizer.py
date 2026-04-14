@@ -20,7 +20,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.domain.exceptions import LLMParseError
+from app.domain.exceptions import ExternalProviderError, LLMParseError
 from app.domain.models.news import ArticleSummary, RawArticle
 from app.infrastructure.providers.llm_parser import (
     CORRECTIVE_HINT,
@@ -123,9 +123,7 @@ class ArticleSummarizer(BasePipelineStep):
 
         company_info = context.outputs.company_info
         company_name: str = (
-            (company_info.name or context.ticker)
-            if company_info is not None
-            else context.ticker
+            (company_info.name or context.ticker) if company_info is not None else context.ticker
         )
 
         logger.info(
@@ -134,16 +132,13 @@ class ArticleSummarizer(BasePipelineStep):
         )
 
         coroutines = [
-            self._summarize_article(article, context, company_name)
-            for article in articles
+            self._summarize_article(article, context, company_name) for article in articles
         ]
 
-        raw_results: list[Any] = list(
-            await asyncio.gather(*coroutines, return_exceptions=True)
-        )
+        raw_results: list[Any] = list(await asyncio.gather(*coroutines, return_exceptions=True))
 
         summaries: list[ArticleSummary] = []
-        for article, result in zip(articles, raw_results):
+        for article, result in zip(articles, raw_results, strict=False):
             if isinstance(result, BaseException):
                 logger.warning(
                     "Article summarisation raised exception",
@@ -152,9 +147,7 @@ class ArticleSummarizer(BasePipelineStep):
                         "error": str(result),
                     },
                 )
-                summaries.append(
-                    ArticleSummary(**article.model_dump(), summarization_failed=True)
-                )
+                summaries.append(ArticleSummary(**article.model_dump(), summarization_failed=True))
             else:
                 summaries.append(result)
 
@@ -238,9 +231,10 @@ class ArticleSummarizer(BasePipelineStep):
                         "Article summarisation failed after corrective retry",
                         extra={"article_id": article.article_id},
                     )
-                    return ArticleSummary(
-                        **article.model_dump(), summarization_failed=True
-                    )
+                    return ArticleSummary(**article.model_dump(), summarization_failed=True)
+            except ExternalProviderError as exc:
+                logger.error(f"error in article summarization: {exc}")
+                raise exc
 
         # Defensive: loop exits without return only if range(2) is empty.
         return ArticleSummary(**article.model_dump(), summarization_failed=True)

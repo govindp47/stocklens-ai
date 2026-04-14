@@ -20,6 +20,7 @@ from fastapi import Request
 from redis.asyncio import Redis
 
 from app.config import Settings, get_settings
+from app.infrastructure.providers.llm_nvidia import NvidiaProvider
 from app.infrastructure.providers.llm_ollama import OllamaProvider
 from app.infrastructure.providers.llm_openai import OpenAIProvider
 from app.infrastructure.providers.prompt_loader import PromptLoader
@@ -60,27 +61,63 @@ def get_orchestrator(request: Request) -> PipelineOrchestrator:
 
 def get_llm_provider(
     request: Request,
-) -> OllamaProvider | OpenAIProvider:
-    """Select LLM provider based on the X-OpenAI-Key request header.
+) -> OllamaProvider | OpenAIProvider | NvidiaProvider:
+    """Select LLM provider based on request headers.
+
+    Priority:
+      1. OpenAI → if X-OpenAI-Key provided
+      2. NVIDIA → based on X-LLM-Provider header (predefined models)
+      3. Default → Ollama
+
+    NVIDIA API key is always loaded from environment.
 
     If the header is present and starts with ``sk-``, an OpenAI provider is
-    returned.  Otherwise the default Ollama provider is used.
+    returned.  Otherwise other provider are used.
 
     Security note: the key is validated for format only (``sk-`` prefix and
     ≤ 200 characters).  No cryptographic verification is performed — the key
     is forwarded verbatim to the OpenAI API.  Invalid keys will fail at
-    inference time.  Keys failing either format check silently fall back to
-    Ollama — no error is returned to the client.
+    inference time.
     """
     settings: Settings = get_settings()
     semaphore: asyncio.Semaphore = request.app.state.llm_semaphore
-    api_key = request.headers.get("X-OpenAI-Key", "")
-    if api_key and api_key.startswith("sk-") and len(api_key) <= 200:
+
+    openai_key = request.headers.get("X-OpenAI-Key", "")
+    provider_hint = request.headers.get("X-LLM-Provider", "").lower()
+
+    # ── OpenAI (user provided key) ────────────────────────────
+    if openai_key and openai_key.startswith("sk-") and len(openai_key) <= 200:
         return OpenAIProvider(
-            api_key=api_key,
-            model="gpt-4o-mini",
+            api_key=openai_key,
+            model=settings.openai_model,
             semaphore=semaphore,
         )
+
+    # ── NVIDIA (env key, fixed models) ────────────────────────
+    nvidia_key = settings.nvidia_api_key
+
+    if provider_hint == "nvidia-llama":
+        return NvidiaProvider(
+            api_key=nvidia_key,
+            model=settings.nvidia_model_llama,
+            semaphore=semaphore,
+        )
+
+    if provider_hint == "nvidia-mistral":
+        return NvidiaProvider(
+            api_key=nvidia_key,
+            model=settings.nvidia_model_mistral,
+            semaphore=semaphore,
+        )
+
+    if provider_hint == "nvidia-deepseek":
+        return NvidiaProvider(
+            api_key=nvidia_key,
+            model=settings.nvidia_model_deepseek,
+            semaphore=semaphore,
+        )
+
+    # ── Default fallback → Ollama ─────────────────────────────
     return OllamaProvider(
         base_url=settings.ollama_url,
         model=settings.default_llm_model,
@@ -99,6 +136,7 @@ __all__ = [
     "get_settings",
     "OllamaProvider",
     "OpenAIProvider",
+    "NvidiaProvider",
     "PromptLoader",
     "Settings",
 ]

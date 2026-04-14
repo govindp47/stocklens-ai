@@ -11,7 +11,7 @@ import pytest
 
 from app.domain.exceptions import ExternalProviderError
 from app.domain.models.market import CompanyInfo
-from app.domain.models.news import ArticleSummary, RawArticle
+from app.domain.models.news import ArticleSummary
 from app.pipeline.context import PipelineContext, PipelineOutputs
 from app.pipeline.steps.base import StepStatus
 from app.pipeline.steps.sentiment_classifier import (
@@ -19,7 +19,6 @@ from app.pipeline.steps.sentiment_classifier import (
     _compute_distribution,
     _compute_dominant_label,
 )
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +68,7 @@ def _make_classifier() -> tuple[SentimentClassifier, MagicMock]:
 # ── Metadata ──────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestMetadata:
     def test_step_metadata(self) -> None:
         classifier, _ = _make_classifier()
@@ -82,7 +81,7 @@ class TestMetadata:
 # ── can_execute ───────────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestCanExecute:
     def test_can_execute_false_when_summaries_none(self) -> None:
         classifier, _ = _make_classifier()
@@ -104,13 +103,11 @@ class TestCanExecute:
 # ── _compute_distribution ─────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestComputeDistribution:
     def test_aggregate_distribution_sums_to_100(self) -> None:
         """Core invariant: distribution always sums to exactly 100."""
-        dist = _compute_distribution(
-            ["positive"] * 3 + ["neutral"] * 4 + ["negative"] * 3
-        )
+        dist = _compute_distribution(["positive"] * 3 + ["neutral"] * 4 + ["negative"] * 3)
         assert sum(dist.values()) == 100
 
     def test_all_positive_gives_100_0_0(self) -> None:
@@ -135,35 +132,48 @@ class TestComputeDistribution:
         for pos in range(n + 1):
             for neg in range(n - pos + 1):
                 neu = n - pos - neg
-                sentiments = (
-                    ["positive"] * pos + ["neutral"] * neu + ["negative"] * neg
-                )
+                sentiments = ["positive"] * pos + ["neutral"] * neu + ["negative"] * neg
                 dist = _compute_distribution(sentiments)
-                assert sum(dist.values()) == 100, (
-                    f"Failed for n={n} pos={pos} neu={neu} neg={neg}: {dist}"
-                )
+                assert (
+                    sum(dist.values()) == 100
+                ), f"Failed for n={n} pos={pos} neu={neu} neg={neg}: {dist}"
 
 
 # ── _compute_dominant_label ───────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestComputeDominantLabel:
     def test_dominant_predominantly_positive(self) -> None:
-        assert _compute_dominant_label({"positive": 65, "neutral": 20, "negative": 15}) == "Predominantly Positive"
+        assert (
+            _compute_dominant_label({"positive": 65, "neutral": 20, "negative": 15})
+            == "Predominantly Positive"
+        )
 
     def test_dominant_mostly_positive(self) -> None:
-        assert _compute_dominant_label({"positive": 45, "neutral": 35, "negative": 20}) == "Mostly Positive"
+        assert (
+            _compute_dominant_label({"positive": 45, "neutral": 35, "negative": 20})
+            == "Mostly Positive"
+        )
 
     def test_dominant_predominantly_negative(self) -> None:
-        assert _compute_dominant_label({"positive": 10, "neutral": 25, "negative": 65}) == "Predominantly Negative"
+        assert (
+            _compute_dominant_label({"positive": 10, "neutral": 25, "negative": 65})
+            == "Predominantly Negative"
+        )
 
     def test_dominant_mostly_negative(self) -> None:
-        assert _compute_dominant_label({"positive": 20, "neutral": 35, "negative": 45}) == "Mostly Negative"
+        assert (
+            _compute_dominant_label({"positive": 20, "neutral": 35, "negative": 45})
+            == "Mostly Negative"
+        )
 
     def test_dominant_neutral_no_strong_signal(self) -> None:
         # abs(30 - 25) = 5 <= 15, neutral = 45 > 40
-        assert _compute_dominant_label({"positive": 30, "neutral": 45, "negative": 25}) == "Neutral / No Strong Signal"
+        assert (
+            _compute_dominant_label({"positive": 30, "neutral": 45, "negative": 25})
+            == "Neutral / No Strong Signal"
+        )
 
     def test_dominant_mixed(self) -> None:
         # Doesn't fit any of the first 5 conditions
@@ -171,17 +181,23 @@ class TestComputeDominantLabel:
 
     def test_predominantly_positive_boundary(self) -> None:
         """Exactly 60% positive → Predominantly Positive."""
-        assert _compute_dominant_label({"positive": 60, "neutral": 20, "negative": 20}) == "Predominantly Positive"
+        assert (
+            _compute_dominant_label({"positive": 60, "neutral": 20, "negative": 20})
+            == "Predominantly Positive"
+        )
 
     def test_mostly_positive_boundary(self) -> None:
         """Exactly 40% positive, 24% negative → Mostly Positive."""
-        assert _compute_dominant_label({"positive": 40, "neutral": 36, "negative": 24}) == "Mostly Positive"
+        assert (
+            _compute_dominant_label({"positive": 40, "neutral": 36, "negative": 24})
+            == "Mostly Positive"
+        )
 
 
 # ── Score clamping and low-confidence override ────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestScoreHandling:
     async def test_low_confidence_reclassified_to_neutral(self) -> None:
         """score < 0.5 overrides label to 'neutral' regardless of LLM output."""
@@ -233,15 +249,13 @@ class TestScoreHandling:
 # ── Aggregate flags ───────────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestAggregateFlags:
     async def test_limited_data_caveat_when_fewer_than_3(self) -> None:
         """limited_data_caveat=True when article_count < 3."""
         summaries = [_make_summary(1), _make_summary(2)]  # 2 articles
         ctx = _make_context(summaries=summaries)
-        ctx.llm_provider.complete = AsyncMock(
-            return_value=_sentiment_response("positive", 0.8)
-        )
+        ctx.llm_provider.complete = AsyncMock(return_value=_sentiment_response("positive", 0.8))
 
         classifier, _ = _make_classifier()
         await classifier.execute(ctx)
@@ -252,9 +266,7 @@ class TestAggregateFlags:
     async def test_no_limited_data_caveat_when_3_or_more(self) -> None:
         summaries = [_make_summary(i) for i in range(1, 4)]
         ctx = _make_context(summaries=summaries)
-        ctx.llm_provider.complete = AsyncMock(
-            return_value=_sentiment_response("positive", 0.8)
-        )
+        ctx.llm_provider.complete = AsyncMock(return_value=_sentiment_response("positive", 0.8))
 
         classifier, _ = _make_classifier()
         await classifier.execute(ctx)
@@ -291,9 +303,7 @@ class TestAggregateFlags:
         """emerging_concern_flag=False when negative < 70%."""
         summaries = [_make_summary(i) for i in range(1, 4)]
         ctx = _make_context(summaries=summaries)
-        ctx.llm_provider.complete = AsyncMock(
-            return_value=_sentiment_response("negative", 0.9)
-        )
+        ctx.llm_provider.complete = AsyncMock(return_value=_sentiment_response("negative", 0.9))
 
         # 3/3 = 100% negative → flag should be True; let's use 2 negative, 1 positive
         summaries2 = [_make_summary(1), _make_summary(2), _make_summary(3)]
@@ -320,7 +330,7 @@ class TestAggregateFlags:
 # ── Step-level LLM failure ────────────────────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestLLMFailure:
     async def test_step_fails_noncritically_when_llm_unavailable(self) -> None:
         """When all articles fail classification, step still returns COMPLETE."""
@@ -359,7 +369,7 @@ class TestLLMFailure:
 # ── Distribution sums to 100 in full flow ─────────────────────────────────────
 
 
-@pytest.mark.unit
+@pytest.mark.unit()
 class TestDistributionInvariant:
     async def test_distribution_sums_to_100(self) -> None:
         """End-to-end: SentimentDistribution model validator confirms sum == 100."""

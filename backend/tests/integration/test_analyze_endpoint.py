@@ -18,12 +18,9 @@ import pytest
 from httpx import AsyncClient
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestAnalyzeEndpoint:
-
-    async def test_post_analyze_returns_202_with_run_id(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_returns_202_with_run_id(self, client: AsyncClient) -> None:
         """Valid ticker returns 202 with a UUID run_id."""
         response = await client.post("/api/v1/analyze", json={"ticker": "AAPL"})
 
@@ -35,9 +32,7 @@ class TestAnalyzeEndpoint:
         UUID(body["run_id"])
         assert body["status"] == "accepted"
 
-    async def test_post_analyze_lowercase_ticker_normalised(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_lowercase_ticker_normalised(self, client: AsyncClient) -> None:
         """Lowercase ticker is normalised to uppercase; returns 202."""
         response = await client.post("/api/v1/analyze", json={"ticker": "msft"})
         assert response.status_code == 202
@@ -54,30 +49,22 @@ class TestAnalyzeEndpoint:
         locs = [str(err.get("loc", "")) for err in detail]
         assert any("ticker" in loc for loc in locs)
 
-    async def test_post_analyze_empty_ticker_returns_422(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_empty_ticker_returns_422(self, client: AsyncClient) -> None:
         """Empty ticker returns 422."""
         response = await client.post("/api/v1/analyze", json={"ticker": ""})
         assert response.status_code == 422
 
-    async def test_post_analyze_special_chars_ticker_returns_422(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_special_chars_ticker_returns_422(self, client: AsyncClient) -> None:
         """Ticker with special characters returns 422."""
         response = await client.post("/api/v1/analyze", json={"ticker": "AA PL"})
         assert response.status_code == 422
 
-    async def test_post_analyze_missing_ticker_returns_422(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_missing_ticker_returns_422(self, client: AsyncClient) -> None:
         """Missing ticker field returns 422."""
         response = await client.post("/api/v1/analyze", json={})
         assert response.status_code == 422
 
-    async def test_post_analyze_rate_limit_returns_429(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_rate_limit_returns_429(self, client: AsyncClient) -> None:
         """11th request within 60 seconds returns 429 with Retry-After header.
 
         The rate limit for POST /api/v1/analyze is 10 per 60-second window
@@ -99,9 +86,7 @@ class TestAnalyzeEndpoint:
         assert "Retry-After" in response.headers
         assert int(response.headers["Retry-After"]) > 0
 
-    async def test_post_analyze_idempotency_same_run_id(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_idempotency_same_run_id(self, client: AsyncClient) -> None:
         """Two rapid submissions of the same ticker from the same IP return the same run_id.
 
         The idempotency window is 2 minutes. Both requests use the test client's
@@ -125,9 +110,7 @@ class TestAnalyzeEndpoint:
         assert r2.status_code == 202
         assert r1.json()["run_id"] != r2.json()["run_id"]
 
-    async def test_post_analyze_openai_key_header_accepted(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_post_analyze_openai_key_header_accepted(self, client: AsyncClient) -> None:
         """Request with valid X-OpenAI-Key header returns 202."""
         response = await client.post(
             "/api/v1/analyze",

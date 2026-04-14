@@ -19,10 +19,12 @@ from app.domain.exceptions import LLMParseError
 # Corrective hint appended to prompt on retry after a parse failure.
 # Must begin with "\n\nIMPORTANT:" per architecture specification.
 CORRECTIVE_HINT: str = (
-    "\n\nIMPORTANT: Your previous response was not valid JSON. "
-    "Respond with ONLY the JSON object. "
-    "Start your response with { and end with }. "
-    "Do not include any other text, explanation, or markdown formatting."
+    "\n\nIMPORTANT: Your previous response was invalid.\n"
+    "Return ONLY a valid JSON object.\n"
+    "Do not include any text before or after the JSON.\n"
+    "Do not use markdown or explanations.\n"
+    "The response MUST start with { and end with }.\n"
+    "Ensure valid JSON syntax (double quotes, no trailing commas).\n"
 )
 
 # Conservative token budget for 4K context local models.
@@ -128,7 +130,7 @@ def truncate_articles_to_token_budget(
         # Recompute a rough proxy: subtract chars per removed article
         # The caller should re-render the prompt with the smaller list;
         # here we shrink proportionally as a conservative guard.
-        avg_article_chars = (len(prompt_template) // max(len(articles), 1))
+        avg_article_chars = len(prompt_template) // max(len(articles), 1)
         prompt_template = prompt_template[: len(prompt_template) - avg_article_chars]
 
     return trimmed

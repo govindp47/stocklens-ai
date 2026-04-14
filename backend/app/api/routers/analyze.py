@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 
 from app.api.dependencies import (
+    NvidiaProvider,
     OllamaProvider,
     OpenAIProvider,
     get_db_pool,
@@ -77,7 +78,7 @@ async def post_analyze(
     db_pool: asyncpg.Pool = Depends(get_db_pool),  # noqa: B008
     redis: Redis = Depends(get_redis),  # type: ignore[type-arg]  # noqa: B008
     orchestrator: PipelineOrchestrator = Depends(get_orchestrator),  # noqa: B008
-    llm_provider: OllamaProvider | OpenAIProvider = Depends(  # noqa: B008
+    llm_provider: OllamaProvider | OpenAIProvider | NvidiaProvider = Depends(  # noqa: B008
         get_llm_provider
     ),
 ) -> AnalyzeResponse | JSONResponse:
@@ -103,9 +104,7 @@ async def post_analyze(
 
     # ── 2. Idempotency check ──────────────────────────────────────────────────
     report_repo = ReportRepository(db_pool)
-    existing_run_id = await report_repo.get_recent_run_for_ip_and_ticker(
-        ip, body.ticker
-    )
+    existing_run_id = await report_repo.get_recent_run_for_ip_and_ticker(ip, body.ticker)
     if existing_run_id is not None:
         log.info(
             "Idempotent request — returning existing run",
@@ -115,7 +114,13 @@ async def post_analyze(
 
     # ── 3. Create analysis run ────────────────────────────────────────────────
     run_id = uuid4()
-    provider_type = "openai" if isinstance(llm_provider, OpenAIProvider) else "ollama"
+    provider_type = (
+        "openai"
+        if isinstance(llm_provider, OpenAIProvider)
+        else "nvidia"
+        if isinstance(llm_provider, NvidiaProvider)
+        else "ollama"
+    )
     await report_repo.create_run(
         run_id=run_id,
         ticker=body.ticker,
@@ -129,6 +134,7 @@ async def post_analyze(
         run_id=run_id,
         ticker=body.ticker,
         llm_provider=llm_provider,
+        timeout_seconds=settings.pipeline_timeout_seconds,
     )
 
     log.info("Analysis run accepted", run_id=str(run_id))

@@ -50,6 +50,52 @@ class NewsResponse(BaseModel):
     articles: list[dict[str, Any]]
 
 
+class RunSummary(BaseModel):
+    """Summary metadata for a single completed analysis run.
+
+    Attributes:
+        run_id: UUID of the analysis run.
+        ticker: Ticker symbol analysed.
+        status: Always ``"complete"`` in this list.
+        created_at: When the run was submitted (ISO 8601, UTC).
+        completed_at: When the run finished (ISO 8601, UTC).
+        duration_ms: Wall-clock duration of the pipeline in milliseconds.
+        llm_provider: LLM provider used (``"ollama"`` or ``"openai"``).
+        llm_model: Specific model name used.
+        steps_total: Total pipeline steps.
+        steps_completed: Steps that completed successfully.
+        steps_failed: Steps that failed.
+    """
+
+    run_id: UUID
+    ticker: str
+    status: str
+    created_at: str
+    completed_at: str
+    duration_ms: int | None
+    llm_provider: str
+    llm_model: str | None
+    steps_total: int
+    steps_completed: int
+    steps_failed: int
+
+
+class RunsListResponse(BaseModel):
+    """Response body for GET /api/v1/runs (200 OK).
+
+    Attributes:
+        total: Number of items returned in this page.
+        limit: Page size requested.
+        offset: Page offset requested.
+        runs: List of completed run summaries.
+    """
+
+    total: int
+    limit: int
+    offset: int
+    runs: list[RunSummary]
+
+
 class MetricsResponse(BaseModel):
     """Response body for GET /api/v1/metrics (200 OK).
 

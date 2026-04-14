@@ -11,7 +11,7 @@ from redis.asyncio import Redis
 
 from app.config import get_settings
 from app.infrastructure.event_bus import RedisEventBus
-from app.infrastructure.providers.market_data import YFinanceMarketDataProvider
+from app.infrastructure.providers.market_data_hybrid import HybridMarketDataProvider
 from app.infrastructure.providers.news_feed import RSSNewsFeedProvider
 from app.infrastructure.providers.prompt_loader import PromptLoader
 from app.infrastructure.repositories.report_repository import ReportRepository
@@ -47,9 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     llm_semaphore = asyncio.Semaphore(settings.max_concurrent_llm_calls)
 
     # ── Providers and repositories ─────────────────────────────────────────
-    market_data_provider = YFinanceMarketDataProvider(
-        redis=redis_client, settings=settings
-    )
+    market_data_provider = HybridMarketDataProvider(redis=redis_client, settings=settings)
     news_feed_provider = RSSNewsFeedProvider(redis=redis_client, settings=settings)
     ticker_cache_repo = TickerCacheRepository(pool=db_pool, redis=redis_client)
     event_bus = RedisEventBus(redis=redis_client)

@@ -46,7 +46,7 @@ _ALLOWED_EVENT_TYPES: frozenset[str] = frozenset(
 
 _MAX_ARTICLES: int = 20
 _MAX_EVENTS: int = 10
-_MAX_ENTRY_CHARS: int = 200
+_MAX_ENTRY_CHARS: int = 300
 
 # ISO date: YYYY-MM-DD
 _ISO_DATE_RE: re.Pattern[str] = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -67,12 +67,12 @@ class _TemplateArticle:
     summary: str
 
     @classmethod
-    def from_summary(cls, title: str, summary: str) -> "_TemplateArticle":
+    def from_summary(cls, title: str, summary: str) -> _TemplateArticle:
         """Build a truncated template article from article fields."""
         combined_len = _MAX_ENTRY_CHARS
         title_trunc = title[:combined_len]
         remaining = combined_len - len(title_trunc) - 3  # " — "
-        summary_trunc = summary[:max(0, remaining)] if summary else ""
+        summary_trunc = summary[: max(0, remaining)] if summary else ""
         return cls(title=title_trunc, summary=summary_trunc)
 
 
@@ -185,9 +185,7 @@ class EventExtractor(BasePipelineStep):
 
         company_info = context.outputs.company_info
         company_name: str = (
-            (company_info.name or context.ticker)
-            if company_info is not None
-            else context.ticker
+            (company_info.name or context.ticker) if company_info is not None else context.ticker
         )
 
         logger.info(
@@ -197,8 +195,7 @@ class EventExtractor(BasePipelineStep):
 
         # Build truncated article list for the template (cap at 20)
         template_articles = [
-            _TemplateArticle.from_summary(a.title, a.summary)
-            for a in summaries[:_MAX_ARTICLES]
+            _TemplateArticle.from_summary(a.title, a.summary) for a in summaries[:_MAX_ARTICLES]
         ]
 
         prompt = self._prompt_loader.render(

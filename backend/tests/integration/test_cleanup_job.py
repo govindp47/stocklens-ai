@@ -20,14 +20,13 @@ import pytest
 
 from app.jobs.cleanup import run_cleanup_once
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 
 async def _insert_run(
     db_pool: asyncpg.Pool,  # type: ignore[type-arg]
     *,
-    run_id=None,
+    run_id: str | None = None,
     ticker: str = "AAPL",
     status: str = "complete",
     created_at: datetime | None = None,
@@ -45,7 +44,12 @@ async def _insert_run(
                  steps_failed, created_at, is_deleted, deleted_at)
             VALUES ($1, $2, $3, 'ollama', 9, 9, 0, $4, $5, $6)
             """,
-            run_id, ticker, status, created_at, is_deleted, deleted_at,
+            run_id,
+            ticker,
+            status,
+            created_at,
+            is_deleted,
+            deleted_at,
         )
     return run_id
 
@@ -53,9 +57,8 @@ async def _insert_run(
 # ── Tests ──────────────────────────────────────────────────────────────────────
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestSoftDeletion:
-
     async def test_soft_deletes_runs_older_than_24h(
         self,
         db_pool: asyncpg.Pool,  # type: ignore[type-arg]
@@ -86,7 +89,7 @@ class TestSoftDeletion:
         recent_time = datetime.now(tz=UTC) - timedelta(hours=10)
         await _insert_run(db_pool, run_id=recent_run_id, created_at=recent_time)
 
-        counts = await run_cleanup_once(db_pool)
+        await run_cleanup_once(db_pool)
 
         async with db_pool.acquire() as conn:  # type: ignore[attr-defined]
             row = await conn.fetchrow(
@@ -97,9 +100,8 @@ class TestSoftDeletion:
         assert row["is_deleted"] is False
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestHardDeletion:
-
     async def test_hard_deletes_soft_deleted_after_grace_period(
         self,
         db_pool: asyncpg.Pool,  # type: ignore[type-arg]
@@ -142,7 +144,7 @@ class TestHardDeletion:
             deleted_at=recent_deleted,
         )
 
-        counts = await run_cleanup_once(db_pool)
+        await run_cleanup_once(db_pool)
 
         async with db_pool.acquire() as conn:  # type: ignore[attr-defined]
             row = await conn.fetchrow(
@@ -152,9 +154,8 @@ class TestHardDeletion:
         assert row is not None, "Row within grace period should NOT be hard-deleted"
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestTickerCacheCleanup:
-
     async def test_deletes_expired_ticker_cache_rows(
         self,
         db_pool: asyncpg.Pool,  # type: ignore[type-arg]
@@ -201,9 +202,8 @@ class TestTickerCacheCleanup:
         assert row is not None, "Non-expired ticker cache row should still exist"
 
 
-@pytest.mark.integration
+@pytest.mark.integration()
 class TestRateLimitLogCleanup:
-
     async def test_deletes_old_rate_limit_log_rows(
         self,
         db_pool: asyncpg.Pool,  # type: ignore[type-arg]

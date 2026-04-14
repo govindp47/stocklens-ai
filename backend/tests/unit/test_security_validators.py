@@ -63,7 +63,7 @@ class TestTickerValidation:
             AnalyzeRequest(ticker="12345")
 
     def test_ticker_exceeding_max_length_rejected(self) -> None:
-        """Strings longer than 5 base characters + optional 1-dot + 3 chars are rejected."""
+        """Strings longer than 20 base characters + optional 1-dot + 5 chars are rejected."""
         with pytest.raises(ValidationError):
             AnalyzeRequest(ticker="TOOLONGSTR")
 

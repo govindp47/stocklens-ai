@@ -29,9 +29,9 @@ class StepEvent(_BaseEvent):
     event_type: Literal["step_event"] = "step_event"
     step_name: str
     step_index: int
-    status: str          # StepStatus.value — stored as string for transport
+    status: str  # StepStatus.value — stored as string for transport
     duration_ms: int = 0
-    reason: str | None = None    # populated on failure or skip
+    reason: str | None = None  # populated on failure or skip
 
 
 class PipelineCompleteEvent(_BaseEvent):
@@ -75,8 +75,10 @@ PipelineEvent = (
 )
 
 # Event types that signal the pipeline has ended (used for sentinel key logic).
-TERMINAL_EVENT_TYPES: frozenset[str] = frozenset({
-    "pipeline_complete",
-    "pipeline_failed",
-    "pipeline_timeout",
-})
+TERMINAL_EVENT_TYPES: frozenset[str] = frozenset(
+    {
+        "pipeline_complete",
+        "pipeline_failed",
+        "pipeline_timeout",
+    }
+)

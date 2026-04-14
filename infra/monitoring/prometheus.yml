@@ -2,6 +2,16 @@ global:
   scrape_interval:     15s
   evaluation_interval: 15s
 
+# Load alerting rules
+rule_files:
+  - "alert_rules.yml"
+
+# Alertmanager configuration (optional — wire up if running Alertmanager)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
 scrape_configs:
   # StockLens FastAPI — prometheus-fastapi-instrumentator exposes /metrics
   - job_name: 'stocklens-api'
@@ -18,3 +28,10 @@ scrape_configs:
   - job_name: 'postgres'
     static_configs:
       - targets: ['postgres-exporter:9187']
+
+  # Node exporter textfile collector — reads .prom files from backup container
+  # (stocklens_last_backup_timestamp_seconds gauge written by backup.sh)
+  - job_name: 'node-textfile'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: /metrics

@@ -22,13 +22,13 @@ if TYPE_CHECKING:
     from app.pipeline.steps.base import PipelineStep
 
 
-def build_step_registry(app_state: Any) -> list["PipelineStep"]:
+def build_step_registry(app_state: Any) -> list[PipelineStep]:
     """Instantiate all nine pipeline steps with injected dependencies.
 
     Args:
         app_state: The FastAPI ``app.state`` object populated during lifespan
             startup.  Must have the following attributes:
-              - market_data_provider  (YFinanceMarketDataProvider)
+              - market_data_provider  (YFinanceMarketDataProvider | HybridMarketDataProvider)
               - news_feed_provider    (RSSNewsFeedProvider)
               - ticker_cache_repo     (TickerCacheRepository)
               - prompt_loader         (PromptLoader)
@@ -74,9 +74,11 @@ def build_step_registry(app_state: Any) -> list["PipelineStep"]:
 
     # Verify ordering is correct (defensive)
     for i, step in enumerate(steps, start=1):
-        assert step.step_index == i, (
-            f"Step order mismatch: expected step_index={i}, got {step.step_index} "
-            f"for {step.name}"
-        )
+        if step.step_index != i:
+            msg = (
+                f"Step order mismatch: expected step_index={i}, got {step.step_index} "
+                f"for {step.name}"
+            )
+            raise ValueError(msg)
 
     return steps

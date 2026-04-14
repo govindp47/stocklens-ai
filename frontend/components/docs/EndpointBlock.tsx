@@ -7,11 +7,12 @@
  * React Server Component — no 'use client' directive.
  */
 
-import { CodeBlock } from './CodeBlock';
+import { CodeBlock } from "./CodeBlock";
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 interface EndpointBlockProps {
+  id?: string;
   method: HttpMethod;
   path: string;
   description: string;
@@ -22,14 +23,15 @@ interface EndpointBlockProps {
 }
 
 const METHOD_COLORS: Record<HttpMethod, string> = {
-  GET:    'bg-blue-100 text-blue-800',
-  POST:   'bg-green-100 text-green-800',
-  PUT:    'bg-amber-100 text-amber-800',
-  DELETE: 'bg-red-100 text-red-800',
-  PATCH:  'bg-purple-100 text-purple-800',
+  GET: "bg-blue-100 text-blue-800",
+  POST: "bg-green-100 text-green-800",
+  PUT: "bg-amber-100 text-amber-800",
+  DELETE: "bg-red-100 text-red-800",
+  PATCH: "bg-purple-100 text-purple-800",
 };
 
 export function EndpointBlock({
+  id,
   method,
   path,
   description,
@@ -39,7 +41,10 @@ export function EndpointBlock({
   notes,
 }: EndpointBlockProps) {
   return (
-    <section className="border border-neutral-200 rounded-lg overflow-hidden mb-6">
+    <section
+      id={id}
+      className="border border-neutral-200 rounded-lg overflow-hidden mb-6"
+    >
       {/* Method + path header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-neutral-50 border-b border-neutral-200">
         <span

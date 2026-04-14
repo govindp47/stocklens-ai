@@ -5,11 +5,12 @@
  * can handle rate limiting and not-found cases explicitly.
  */
 
-import type { AnalyzeResponse, AnalysisReport, SystemMetrics } from '../types/report';
-
-// ─── Base URL ─────────────────────────────────────────────────────────────────
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+import type {
+  AnalyzeResponse,
+  AnalysisReport,
+  RunsListResponse,
+  SystemMetrics,
+} from "../types/report";
 
 // ─── Custom error classes ─────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export class RateLimitError extends Error {
 
   constructor(retryAfter: number) {
     super(`Rate limit exceeded. Retry after ${retryAfter} seconds.`);
-    this.name = 'RateLimitError';
+    this.name = "RateLimitError";
     this.retryAfter = retryAfter;
   }
 }
@@ -26,7 +27,7 @@ export class RateLimitError extends Error {
 export class NotFoundError extends Error {
   constructor(resource: string) {
     super(`Resource not found: ${resource}`);
-    this.name = 'NotFoundError';
+    this.name = "NotFoundError";
   }
 }
 
@@ -35,7 +36,7 @@ export class ApiError extends Error {
 
   constructor(status: number, message: string) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
   }
 }
@@ -48,13 +49,19 @@ export function isRateLimitError(err: unknown): err is RateLimitError {
 
 // ─── Internal helper ──────────────────────────────────────────────────────────
 
-async function handleResponse<T>(response: Response, resource = ''): Promise<T> {
+async function handleResponse<T>(
+  response: Response,
+  resource = "",
+): Promise<T> {
   if (response.ok) {
     return response.json() as Promise<T>;
   }
 
   if (response.status === 429) {
-    const retryAfter = parseInt(response.headers.get('Retry-After') ?? '60', 10);
+    const retryAfter = parseInt(
+      response.headers.get("Retry-After") ?? "60",
+      10,
+    );
     throw new RateLimitError(retryAfter);
   }
 
@@ -65,9 +72,9 @@ async function handleResponse<T>(response: Response, resource = ''): Promise<T> 
   let message = `API error ${response.status}`;
   try {
     const body = await response.json();
-    if (typeof body?.detail === 'string') {
+    if (typeof body?.detail === "string") {
       message = body.detail;
-    } else if (typeof body?.detail?.message === 'string') {
+    } else if (typeof body?.detail?.message === "string") {
       message = body.detail.message;
     }
   } catch {
@@ -90,20 +97,35 @@ async function handleResponse<T>(response: Response, resource = ''): Promise<T> 
  */
 export async function triggerAnalysis(
   ticker: string,
-  openAiKey?: string,
+  options?: {
+    openAiKey?: string;
+    provider?:
+      | "ollama"
+      | "openai"
+      | "nvidia-llama"
+      | "nvidia-mistral"
+      | "nvidia-deepseek";
+  },
 ): Promise<AnalyzeResponse> {
-  const body: Record<string, string> = { ticker };
-  if (openAiKey) {
-    body.openai_api_key = openAiKey;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (options?.openAiKey) {
+    headers["X-OpenAI-Key"] = options.openAiKey;
   }
 
-  const response = await fetch(`${BASE_URL}/api/v1/analyze`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+  if (options?.provider && options.provider.startsWith("nvidia")) {
+    headers["X-LLM-Provider"] = options.provider;
+  }
+
+  const response = await fetch(`/api/v1/analyze`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ ticker }),
   });
 
-  return handleResponse<AnalyzeResponse>(response, 'analyze');
+  return handleResponse<AnalyzeResponse>(response, "analyze");
 }
 
 /**
@@ -115,9 +137,39 @@ export async function triggerAnalysis(
  * @throws {ApiError} on any other non-2xx response
  */
 export async function getPastResult(runId: string): Promise<AnalysisReport> {
-  const response = await fetch(`${BASE_URL}/api/v1/results/${runId}`);
-  const data = await handleResponse<{ report: AnalysisReport }>(response, runId);
+  const response = await fetch(`/api/v1/results/${runId}`);
+  const data = await handleResponse<{ report: AnalysisReport }>(
+    response,
+    runId,
+  );
   return data.report;
+}
+
+/**
+ * GET /api/v1/runs
+ *
+ * Returns a paginated list of successfully completed pipeline runs with metadata.
+ * Ordered by completion time descending.
+ *
+ * @throws {ApiError} on non-2xx response
+ */
+export async function getCompletedRuns(
+  limit = 50,
+  offset = 0,
+): Promise<RunsListResponse> {
+  // ❌ new URL('/api/v1/runs') throws on server-side — no base to resolve against
+  // const url = new URL(`/api/v1/runs`);
+  // url.searchParams.set('limit', String(limit));
+  // url.searchParams.set('offset', String(offset));
+  // const response = await fetch(url.toString());
+
+  // ✅ Use URLSearchParams to build the query string safely (works in browser + Node)
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+  const response = await fetch(`/api/v1/runs?${params.toString()}`);
+  return handleResponse<RunsListResponse>(response, "runs");
 }
 
 /**
@@ -128,6 +180,6 @@ export async function getPastResult(runId: string): Promise<AnalysisReport> {
  * @throws {ApiError} on non-2xx response
  */
 export async function getMetrics(): Promise<SystemMetrics> {
-  const response = await fetch(`${BASE_URL}/api/v1/metrics`);
-  return handleResponse<SystemMetrics>(response, 'metrics');
+  const response = await fetch(`/api/v1/metrics`);
+  return handleResponse<SystemMetrics>(response, "metrics");
 }

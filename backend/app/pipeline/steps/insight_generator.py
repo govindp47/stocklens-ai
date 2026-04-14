@@ -19,7 +19,6 @@ Retry behaviour is orchestrator-managed (max_retries=2).
 
 from __future__ import annotations
 
-import dataclasses
 import logging
 import time
 from typing import Any
@@ -150,36 +149,26 @@ class InsightGenerator(BasePipelineStep):
 
         company_info = context.outputs.company_info
         company_name: str = (
-            (company_info.name or context.ticker)
-            if company_info is not None
-            else context.ticker
+            (company_info.name or context.ticker) if company_info is not None else context.ticker
         )
 
         market_data = context.outputs.market_data
         market_data_available = (
-            market_data is not None
-            and market_data.available
-            and market_data.change_pct is not None
+            market_data is not None and market_data.available and market_data.change_pct is not None
         )
 
         sentiment = context.outputs.sentiment
         sentiment_available = (
-            sentiment is not None
-            and sentiment.available
-            and sentiment.distribution is not None
+            sentiment is not None and sentiment.available and sentiment.distribution is not None
         )
 
         # Top N most recent articles (sort by published_at descending)
-        raw_summaries: list[ArticleSummary] = list(
-            context.outputs.article_summaries or []
-        )
+        raw_summaries: list[ArticleSummary] = list(context.outputs.article_summaries or [])
         raw_summaries.sort(key=lambda a: a.published_at, reverse=True)
         articles: list[ArticleSummary] = raw_summaries[:_MAX_ARTICLES_IN_PROMPT]
 
         # Top N events
-        events: list[ExtractedEvent] = list(context.outputs.events or [])[
-            :_MAX_EVENTS_IN_PROMPT
-        ]
+        events: list[ExtractedEvent] = list(context.outputs.events or [])[:_MAX_EVENTS_IN_PROMPT]
 
         # Build prompt; apply token-budget truncation (articles first, then events)
         prompt = _render_prompt(
@@ -283,10 +272,11 @@ class InsightGenerator(BasePipelineStep):
             extra={"ticker": context.ticker, "duration_ms": duration_ms},
         )
 
+        summary = f"sections=6 market={market_data_available} sentiment={sentiment_available}"
         return StepResult(
             step_name=self.name,
             step_index=self.step_index,
             status=StepStatus.COMPLETE,
             duration_ms=duration_ms,
-            output_summary=f"sections=6 market={market_data_available} sentiment={sentiment_available}",
+            output_summary=summary,
         )

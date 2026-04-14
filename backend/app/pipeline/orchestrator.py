@@ -17,7 +17,7 @@ import structlog
 
 from app.domain.exceptions import ExternalProviderError, LLMParseError, TickerNotResolvableError
 from app.infrastructure.event_bus import EventBus
-from app.infrastructure.providers import LLMProvider
+from app.infrastructure.providers.llm_provider import LLMProvider
 from app.infrastructure.repositories.report_repository import ReportRepository
 from app.pipeline.context import PipelineContext
 from app.pipeline.steps.base import PipelineStep, StepFailure, StepResult, StepStatus
@@ -96,11 +96,14 @@ class PipelineOrchestrator:
             # DB failure is non-fatal here; Redis/SSE still tracks progress.
             log.error("Failed to mark run in_progress")
 
-        await self._event_bus.publish(run_id, {
-            "type": "pipeline_started",
-            "run_id": str(run_id),
-            "ticker": ticker,
-        })
+        await self._event_bus.publish(
+            run_id,
+            {
+                "type": "pipeline_started",
+                "run_id": str(run_id),
+                "ticker": ticker,
+            },
+        )
 
         steps_completed = 0
         steps_failed = 0
@@ -113,7 +116,7 @@ class PipelineOrchestrator:
                 # ── Prerequisites check ────────────────────────────────────
                 if not step.can_execute(context):
                     step_log.info("Step skipped — prerequisites not met")
-                    asyncio.create_task(
+                    asyncio.create_task(  # noqa: RUF006
                         self._upsert_step_safe(
                             run_id,
                             StepResult(
@@ -124,22 +127,28 @@ class PipelineOrchestrator:
                             ),
                         )
                     )
-                    await self._event_bus.publish(run_id, {
-                        "type": "step_update",
-                        "step_name": step.name,
-                        "step_index": step.step_index,
-                        "status": StepStatus.SKIPPED.value,
-                        "reason": "Prerequisites not met; step skipped",
-                    })
+                    await self._event_bus.publish(
+                        run_id,
+                        {
+                            "type": "step_update",
+                            "step_name": step.name,
+                            "step_index": step.step_index,
+                            "status": StepStatus.SKIPPED.value,
+                            "reason": "Prerequisites not met; step skipped",
+                        },
+                    )
                     continue
 
                 # ── Publish step-started event ─────────────────────────────
-                await self._event_bus.publish(run_id, {
-                    "type": "step_update",
-                    "step_name": step.name,
-                    "step_index": step.step_index,
-                    "status": StepStatus.RUNNING.value,
-                })
+                await self._event_bus.publish(
+                    run_id,
+                    {
+                        "type": "step_update",
+                        "step_name": step.name,
+                        "step_index": step.step_index,
+                        "status": StepStatus.RUNNING.value,
+                    },
+                )
 
                 # ── Execute with retry ─────────────────────────────────────
                 result = await self._execute_with_retry(step, context)
@@ -148,7 +157,9 @@ class PipelineOrchestrator:
                 await self._event_bus.publish(run_id, _step_event(result))
 
                 # ── Fire-and-forget DB step upsert ────────────────────────
-                asyncio.create_task(self._upsert_step_safe(run_id, result))
+                asyncio.create_task(  # noqa: RUF006
+                    self._upsert_step_safe(run_id, result)
+                )
 
                 # ── Update counters ────────────────────────────────────────
                 if result.status == StepStatus.COMPLETE:
@@ -194,7 +205,7 @@ class PipelineOrchestrator:
         run_id: UUID,
         ticker: str,
         llm_provider: LLMProvider,
-        timeout_seconds: float = 90.0,
+        timeout_seconds: float = 420.0,
     ) -> UUID:
         """Create the pipeline task and a watchdog task; return ``run_id``.
 
@@ -209,7 +220,7 @@ class PipelineOrchestrator:
             self.run(run_id, ticker, llm_provider),
             name=f"pipeline-{run_id}",
         )
-        asyncio.create_task(
+        asyncio.create_task(  # noqa: RUF006
             pipeline_watchdog(
                 run_id=run_id,
                 pipeline_task=pipeline_task,
@@ -355,13 +366,16 @@ class PipelineOrchestrator:
                 )
             except Exception:
                 log.error("Failed to persist pipeline failure to DB")
-            await self._event_bus.publish(run_id, {
-                "type": "pipeline_failed",
-                "run_id": str(run_id),
-                "reason": error_message,
-                "steps_completed": steps_completed,
-                "steps_failed": steps_failed,
-            })
+            await self._event_bus.publish(
+                run_id,
+                {
+                    "type": "pipeline_failed",
+                    "run_id": str(run_id),
+                    "reason": error_message,
+                    "steps_completed": steps_completed,
+                    "steps_failed": steps_failed,
+                },
+            )
         else:
             persisted_json = report_json if report_json is not None else json.dumps({})
             try:
@@ -372,11 +386,14 @@ class PipelineOrchestrator:
                 )
             except Exception:
                 log.error("Failed to persist pipeline completion to DB")
-            await self._event_bus.publish(run_id, {
-                "type": "pipeline_complete",
-                "run_id": str(run_id),
-                "steps_completed": steps_completed,
-            })
+            await self._event_bus.publish(
+                run_id,
+                {
+                    "type": "pipeline_complete",
+                    "run_id": str(run_id),
+                    "steps_completed": steps_completed,
+                },
+            )
 
     async def _upsert_step_safe(self, run_id: UUID, result: StepResult) -> None:
         """Fire-and-forget step DB upsert; logs but never propagates failures."""
@@ -440,7 +457,7 @@ async def pipeline_watchdog(
         # Pipeline completed within the timeout window — nothing to do.
         log.debug("Pipeline completed before watchdog timeout")
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         log.warning("Pipeline watchdog fired — cancelling pipeline task")
 
         # Explicitly cancel the pipeline task now that we know it timed out.
@@ -463,10 +480,13 @@ async def pipeline_watchdog(
         except Exception:
             log.error("Failed to mark run timed_out after watchdog cancellation")
 
-        await event_bus.publish(run_id, {
-            "type": "pipeline_timeout",
-            "run_id": str(run_id),
-        })
+        await event_bus.publish(
+            run_id,
+            {
+                "type": "pipeline_timeout",
+                "run_id": str(run_id),
+            },
+        )
         # CancelledError is NOT re-raised here — watchdog swallows it.
 
     except Exception:

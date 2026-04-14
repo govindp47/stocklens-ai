@@ -103,7 +103,8 @@ class TestMarkInProgressOptimisticLock:
         assert result is False
 
     async def test_status_is_in_progress_after_transition(
-        self, db_pool: asyncpg.Pool  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,  # type: ignore[type-arg]
     ) -> None:
         repo = _make_repo(db_pool)
         run_id = await _create_run(repo)
@@ -128,7 +129,8 @@ class TestMarkCompletePreventDoubleWrite:
         assert row["status"] == "complete"
 
     async def test_second_mark_complete_returns_false(
-        self, db_pool: asyncpg.Pool  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,  # type: ignore[type-arg]
     ) -> None:
         """AND report_data IS NULL guard prevents overwriting an existing report."""
         repo = _make_repo(db_pool)
@@ -174,9 +176,7 @@ class TestUpsertStepIdempotent:
         repo = _make_repo(db_pool)
         run_id = await _create_run(repo)
 
-        await repo.upsert_step(
-            run_id, 1, "TickerValidator", "complete", duration_ms=50
-        )
+        await repo.upsert_step(run_id, 1, "TickerValidator", "complete", duration_ms=50)
 
         async with db_pool.acquire() as conn:
             count = await conn.fetchval(
@@ -185,7 +185,8 @@ class TestUpsertStepIdempotent:
         assert count == 1
 
     async def test_second_upsert_does_not_create_duplicate(
-        self, db_pool: asyncpg.Pool  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,  # type: ignore[type-arg]
     ) -> None:
         """Calling upsert_step twice with same (run_id, step_index) produces one row."""
         repo = _make_repo(db_pool)
@@ -203,7 +204,8 @@ class TestUpsertStepIdempotent:
 
         async with db_pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT status, duration_ms FROM pipeline_steps WHERE run_id = $1 AND step_index = 1",
+                "SELECT status, duration_ms FROM pipeline_steps "
+                "WHERE run_id = $1 AND step_index = 1",
                 run_id,
             )
 
@@ -279,7 +281,9 @@ class TestGetRecentRunReturnsNoneAfterWindow:
 
 class TestNegativeTickerCache:
     async def test_resolve_returns_none_for_uncached(
-        self, db_pool: asyncpg.Pool, redis: object  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,
+        redis: object,  # type: ignore[type-arg]
     ) -> None:
         """An uncached ticker must return None (cache miss)."""
         import redis.asyncio as aioredis
@@ -291,7 +295,9 @@ class TestNegativeTickerCache:
         assert result is None
 
     async def test_negative_cache_returns_false(
-        self, db_pool: asyncpg.Pool, redis: object  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,
+        redis: object,  # type: ignore[type-arg]
     ) -> None:
         """A ticker set as unresolvable must return False, not None."""
         import redis.asyncio as aioredis
@@ -305,7 +311,9 @@ class TestNegativeTickerCache:
         assert result is False
 
     async def test_positive_cache_returns_true(
-        self, db_pool: asyncpg.Pool, redis: object  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,
+        redis: object,  # type: ignore[type-arg]
     ) -> None:
         """A ticker set as resolvable must return True."""
         import redis.asyncio as aioredis
@@ -319,7 +327,9 @@ class TestNegativeTickerCache:
         assert result is True
 
     async def test_pg_fallback_after_redis_miss(
-        self, db_pool: asyncpg.Pool, redis: object  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,
+        redis: object,  # type: ignore[type-arg]
     ) -> None:
         """After Redis is flushed, resolve() falls back to PostgreSQL."""
         import fakeredis.aioredis as fakeredis
@@ -365,7 +375,8 @@ class TestMetricsUpsertIdempotent:
         assert rows[0]["runs_total"] == 10
 
     async def test_second_upsert_overwrites_not_duplicates(
-        self, db_pool: asyncpg.Pool  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,  # type: ignore[type-arg]
     ) -> None:
         """Calling upsert twice for the same bucket_start must produce one row."""
         repo = MetricsRepository(db_pool)
@@ -381,7 +392,8 @@ class TestMetricsUpsertIdempotent:
         assert rows[0]["runs_total"] == 12
 
     async def test_get_recent_metrics_returns_newest_first(
-        self, db_pool: asyncpg.Pool  # type: ignore[type-arg]
+        self,
+        db_pool: asyncpg.Pool,  # type: ignore[type-arg]
     ) -> None:
         repo = MetricsRepository(db_pool)
         now = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
@@ -389,9 +401,7 @@ class TestMetricsUpsertIdempotent:
         for offset in (4, 3, 2):
             bucket_start = now - timedelta(hours=offset)
             bucket_end = bucket_start + timedelta(hours=1)
-            await repo.upsert_hourly_metrics(
-                bucket_start, bucket_end, runs_total=offset
-            )
+            await repo.upsert_hourly_metrics(bucket_start, bucket_end, runs_total=offset)
 
         rows = await repo.get_recent_metrics(hours=48)
         assert len(rows) == 3

@@ -39,8 +39,8 @@ async def get_news(
         raise HTTPException(
             status_code=422,
             detail=(
-                "Invalid ticker format. Must be 1–5 uppercase letters, "
-                "optionally followed by a dot and 1–3 uppercase letters (e.g. AAPL, BRK.B)."
+                "Invalid ticker format. Must be 1-10 uppercase letters, "
+                "optionally followed by a dot and 1-3 uppercase letters (e.g. AAPL, BRK.B)."
             ),
         )
 

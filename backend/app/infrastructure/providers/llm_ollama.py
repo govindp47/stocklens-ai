@@ -12,12 +12,14 @@ import httpx
 import structlog
 
 from app.domain.exceptions import ExternalProviderError
-from app.infrastructure.providers import LLMProvider  # noqa: F401 (Protocol for type checking)
+from app.infrastructure.providers.llm_provider import (
+    LLMProvider,  # noqa: F401 (Protocol for type checking)
+)
 
 log = structlog.get_logger(__name__)
 
-_CONNECT_TIMEOUT = 5.0   # seconds
-_READ_TIMEOUT = 45.0     # seconds
+_CONNECT_TIMEOUT = 5.0  # seconds
+_READ_TIMEOUT = 120.0  # seconds — covers model loading on first request
 
 
 class OllamaProvider:

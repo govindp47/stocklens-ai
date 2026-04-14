@@ -12,7 +12,6 @@ since it contains no network I/O.
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from typing import Literal
@@ -81,29 +80,19 @@ def _collect_partial_notices(context: PipelineContext) -> list[str]:
             "Market data is unavailable. The stock overview panel could not be populated."
         )
     if context.outputs.price_history is None:
-        notices.append(
-            "Price history is unavailable. The price chart could not be displayed."
-        )
+        notices.append("Price history is unavailable. The price chart could not be displayed.")
     if not context.outputs.deduplicated_articles:
-        notices.append(
-            "No relevant news articles were found for this ticker."
-        )
+        notices.append("No relevant news articles were found for this ticker.")
     elif not context.outputs.article_summaries:
-        notices.append(
-            "Article summarisation was unavailable. Raw headlines are shown."
-        )
+        notices.append("Article summarisation was unavailable. Raw headlines are shown.")
     if context.outputs.sentiment is None:
         notices.append(
             "Sentiment analysis is unavailable. The sentiment panel could not be populated."
         )
     if context.outputs.events is None:
-        notices.append(
-            "Event extraction was unavailable. The events panel could not be populated."
-        )
+        notices.append("Event extraction was unavailable. The events panel could not be populated.")
     if context.outputs.insights is None:
-        notices.append(
-            "AI insights are unavailable. The research overview could not be generated."
-        )
+        notices.append("AI insights are unavailable. The research overview could not be generated.")
 
     return notices
 
@@ -116,12 +105,18 @@ def _collect_data_sources(context: PipelineContext) -> list[DataSource]:
     sources: list[DataSource] = []
 
     if context.outputs.market_data is not None:
-        sources.append(DataSource(name="yfinance", status="ok"))
+        sources.append(DataSource(name="nse/alpha_vantage", status="ok"))
 
     if context.outputs.raw_articles:
-        sources.append(DataSource(name="yahoo_rss", status="ok"))
+        sources.append(DataSource(name="yahoo_rss/google_rss", status="ok"))
     elif context.outputs.raw_articles is not None:
-        sources.append(DataSource(name="yahoo_rss", status="unavailable", detail="No articles found"))
+        sources.append(
+            DataSource(
+                name="yahoo_rss/google_rss",
+                status="unavailable",
+                detail="No articles found",
+            )
+        )
 
     if context.outputs.article_summaries or context.outputs.insights:
         sources.append(
@@ -154,7 +149,7 @@ class ReportAssembler(BasePipelineStep):
 
     # ── PipelineStep Protocol ──────────────────────────────────────────────
 
-    def can_execute(self, context: PipelineContext) -> bool:  # noqa: ARG002
+    def can_execute(self, context: PipelineContext) -> bool:
         """Always executable — assembly works with any subset of available data."""
         return True
 
@@ -174,13 +169,9 @@ class ReportAssembler(BasePipelineStep):
 
         company = context.outputs.company_info or CompanyInfo(ticker=context.ticker)
 
-        market_data: MarketData = context.outputs.market_data or MarketData(
-            available=False
-        )
+        market_data: MarketData = context.outputs.market_data or MarketData(available=False)
 
-        price_history: PriceHistory = context.outputs.price_history or PriceHistory(
-            available=False
-        )
+        price_history: PriceHistory = context.outputs.price_history or PriceHistory(available=False)
 
         article_summaries: list[ArticleSummary] = context.outputs.article_summaries or []
         news = NewsCollection(
@@ -188,9 +179,7 @@ class ReportAssembler(BasePipelineStep):
             articles=article_summaries,
         )
 
-        sentiment: SentimentResult = context.outputs.sentiment or SentimentResult(
-            available=False
-        )
+        sentiment: SentimentResult = context.outputs.sentiment or SentimentResult(available=False)
 
         events_result = (
             EventsResult(available=True, events=context.outputs.events)

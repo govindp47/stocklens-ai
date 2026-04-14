@@ -47,7 +47,7 @@ def upgrade() -> None:
             server_default=sa.text("gen_random_uuid()"),
             nullable=False,
         ),
-        sa.Column("ticker", sa.String(12), nullable=False),
+        sa.Column("ticker", sa.String(25), nullable=False),
         sa.Column("status", sa.String(20), server_default="accepted", nullable=False),
         sa.Column(
             "created_at",
@@ -65,7 +65,7 @@ def upgrade() -> None:
         ),
         sa.Column("duration_ms", sa.Integer(), nullable=True),
         sa.Column("llm_provider", sa.String(20), server_default="ollama", nullable=False),
-        sa.Column("llm_model", sa.String(80), nullable=True),
+        sa.Column("llm_model", sa.String(150), nullable=True),
         sa.Column("ip_address", sa.String(45), nullable=True),  # INET stored as text via asyncpg
         sa.Column("report_data", sa.JSON(), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
@@ -81,7 +81,7 @@ def upgrade() -> None:
             name="analysis_runs_status_check",
         ),
         sa.CheckConstraint(
-            "llm_provider IN ('ollama', 'openai')",
+            "llm_provider IN ('ollama', 'openai', 'nvidia')",
             name="analysis_runs_llm_provider_check",
         ),
         sa.CheckConstraint(
@@ -97,7 +97,7 @@ def upgrade() -> None:
             name="analysis_runs_duration_positive",
         ),
         sa.CheckConstraint(
-            r"ticker ~ '^[A-Z]{1,5}(\.[A-Z]{1,3})?$'",
+            r"ticker ~ '^[A-Z]{1,20}(\.[A-Z]{1,5})?$'",
             name="analysis_runs_ticker_format",
         ),
     )
@@ -179,7 +179,7 @@ def upgrade() -> None:
     op.create_table(
         "ticker_resolution_cache",
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("ticker", sa.String(12), nullable=False),
+        sa.Column("ticker", sa.String(25), nullable=False),
         sa.Column("company_name", sa.String(200), nullable=True),
         sa.Column("exchange", sa.String(20), nullable=True),
         sa.Column("sector", sa.String(100), nullable=True),
@@ -197,7 +197,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name="ticker_resolution_cache_pkey"),
         sa.UniqueConstraint("ticker", name="ticker_resolution_cache_ticker_unique"),
         sa.CheckConstraint(
-            r"ticker ~ '^[A-Z]{1,12}(\.[A-Z]{1,3})?$'",
+            r"ticker ~ '^[A-Z]{1,20}(\.[A-Z]{1,5})?$'",
             name="ticker_resolution_cache_ticker_format",
         ),
         sa.CheckConstraint(
